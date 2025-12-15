@@ -13,9 +13,9 @@ from utility.evaluation import (
     preprocess_data,
     get_patient_data,
     calculate_metrics,
-    save_fn_fp,
     full_save_fn_fp,
     read_patient_outputs,
+    normalize_label,
 )
 from agents.specificity import specificity_agent, summarizer_specificity
 from agents.sensitivity import sensitivity_agent, summarizer_sensitivity
@@ -58,7 +58,7 @@ def run_agentic_workflow(
         raise ValueError("Iterations must be positive integer")
 
     if os.path.isfile(BasePrompt):
-        with open(BasePrompt, "r") as f:
+        with open(BasePrompt, "r", encoding="utf-8") as f:
             current_prompt = f.read()
     else:
         current_prompt = BasePrompt
@@ -184,39 +184,36 @@ def run_agentic_workflow(
 
         try:
             df = preprocess_data(large_df)
+            logging.info(f"After preprocess_data: Total rows={len(df)}, with yn extraction results")
+            
             df_pt = get_patient_data(df)
             pt_label = os.path.join(evaluation_output_folder, f"patient_level_label_{iter}.csv")
             df_pt.to_csv(pt_label, index=False)
+            logging.info(f"Patient-level labels saved to {pt_label}")
         except Exception as e:
             logging.exception(f"Error in preprocessing: {e}")
             raise
 
         try:
-            #df_pt["Ground Truth"] = df_pt["Ground Truth"].apply(lambda x: 1 if x != 0 else 0)
-            df_pt["Ground Truth"] = df_pt["Ground Truth"].astype(str).str.strip().str.lower()
-            df_pt["Ground Truth"] = df_pt["Ground Truth"].map({
-            "yes": 1,
-            "yes.": 1,
-            "1": 1,
-            "true": 1,
-            "no": 0,
-            "no.": 0,
-            "0": 0,
-            "false": 0
-            })
+            # Normalize Ground Truth labels with better handling
+            
+            df_pt["Ground Truth"] = df_pt["Ground Truth"].apply(normalize_label)
+            logging.info(f"Normalized Ground Truth counts:\n{df_pt['Ground Truth'].value_counts(dropna=False)}")
             
             #df_pt["final_answer"] = df_pt["final_answer"].apply(lambda x: 1 if x != 0 else 0)
-            df_pt["final_answer"] = df_pt["final_answer"].astype(str).str.strip().str.lower()
-            df_pt["final_answer"] = df_pt["final_answer"].map({
-            "yes": 1,
-            "yes.": 1,
-            "1": 1,
-            "true": 1,
-            "no": 0,
-            "no.": 0,
-            "0": 0,
-            "false": 0
-            })
+            # final_answer should already be 0/1 from preprocess_data, but handle edge cases
+            df_pt["final_answer"] = pd.to_numeric(df_pt["final_answer"], errors="coerce").fillna(0).astype(int)
+            logging.info(f"Final answer counts:\n{df_pt['final_answer'].value_counts(dropna=False)}")
+            
+            # Map response column to 0/1 for visit-level filtering in FN/FP analysis
+            # This is only used for FN/FP identification, not for final metrics
+            df_pt["response"] = df_pt["response"].astype(str).str.strip().str.lower()
+            response_map = {
+                "yes": 1, "yes.": 1, "1": 1, "true": 1,
+                "no": 0, "no.": 0, "0": 0, "false": 0
+            }
+            df_pt["response"] = df_pt["response"].map(response_map)
+            logging.info(f"Response column mapped for FN/FP analysis:\n{df_pt['response'].value_counts(dropna=False)}")
         except Exception as e:
             logging.exception(f"Error normalizing label columns: {e}")
             raise
@@ -327,10 +324,10 @@ def run_agentic_workflow(
                             logging.exception(f"summarizer_sensitivity failed: {e}")
                             new_prompt = current_prompt + "\n# (summarizer failed; prompt unchanged)"
 
-                    with open(os.path.join(sensitivity_output_folder, f"ap{improver_iter}_raw.txt"), "w") as f:
+                    with open(os.path.join(sensitivity_output_folder, f"ap{improver_iter}_raw.txt"), "w", encoding="utf-8") as f:
                         f.write(new_prompt)
                     current_prompt = clean_prompt(new_prompt)
-                    with open(p_output_file_path, "w") as f:
+                    with open(p_output_file_path, "w", encoding="utf-8") as f:
                         f.write(current_prompt)
                     print(f"NEW SENSITIVITY PROMPT SAVED: {p_output_file_path}")
                     logging.info(f"new sensitivity prompt saved: {p_output_file_path}")
@@ -339,88 +336,87 @@ def run_agentic_workflow(
 
         #Specificity improver
         if (priority == "specificity" and current_specificity < specificity_threshold) or (priority == "sensitivity" and current_sensitivity > sensitivity_threshold and current_specificity < specificity_threshold):
-          print(f"\nENTERING SPECIFICITY IMPROVER for iteration {improver_iter} | Current Specificity: {current_specificity:.4f}")
-          logging.info(f"Entering specificity improver (iter {improver_iter}) | Spec={current_specificity:.4f} | FP notes={len(fp_df)}")
-          specificity_output_folder = os.path.join(output_folder, f"specificity_iter_{improver_iter}")
-          os.makedirs(specificity_output_folder, exist_ok=True)
-          spe_fp_output_csv = os.path.join(specificity_output_folder, f"specificity_iter_{improver_iter}_result.csv")
-          clean_output_csv = os.path.join(specificity_output_folder, f"specificity_iter_{improver_iter}_result_cleaned.csv")
-          p_output_file_path = os.path.join(specificity_output_folder, f"ap{improver_iter}.txt")
-          
-          if fp_df.empty:
-            print("No false-positive rows to use for specificity improver.")
-            logging.warning("FP dataframe empty; skipping specificity improver.")
-          else:
-            if not os.path.exists(spe_fp_output_csv) or os.path.getsize(spe_fp_output_csv) == 0:
-              results = []
-              for idx, row in fp_df.iterrows():
-                text = row.get("Visit", "")
-                empi = row.get("empi", None)
-
-                if pd.isna(text) or str(text).strip() == "":
-                    continue
-
-                try:
-                    print(f"  SpecAgent processing FP note {idx+1}/{len(fp_df)} (empi={empi})")
-                    print(text)
-                    evidence = specificity_agent(Backend, text, SOP)
-                    print(evidence)
-                    results.append({"empi": empi, "evidence": evidence})
-                except Exception as e:
-                    logging.exception(f"specificity_agent failed for fp row {idx}: {e}")
-                    results.append({"empi": empi, "evidence": None})
-
-              result_df = pd.DataFrame(results)
-              result_df.to_csv(spe_fp_output_csv, index=False)
-              print(f"? FP specificity evidence saved to {spe_fp_output_csv}")
-
+            print(f"\nENTERING SPECIFICITY IMPROVER for iteration {improver_iter} | Current Specificity: {current_specificity:.4f}")
+            logging.info(f"Entering specificity improver (iter {improver_iter}) | Spec={current_specificity:.4f} | FP notes={len(fp_df)}")
+            specificity_output_folder = os.path.join(output_folder, f"specificity_iter_{improver_iter}")
+            os.makedirs(specificity_output_folder, exist_ok=True)
+            spe_fp_output_csv = os.path.join(specificity_output_folder, f"specificity_iter_{improver_iter}_result.csv")
+            clean_output_csv = os.path.join(specificity_output_folder, f"specificity_iter_{improver_iter}_result_cleaned.csv")
+            p_output_file_path = os.path.join(specificity_output_folder, f"ap{improver_iter}.txt")
+            
+            if fp_df.empty:
+                print("No false-positive rows to use for specificity improver.")
+                logging.warning("FP dataframe empty; skipping specificity improver.")
             else:
-              result_df = pd.read_csv(spe_fp_output_csv)
-              print(f"? Loaded existing specificity evidence CSV ({len(result_df)} rows)")
+                if not os.path.exists(spe_fp_output_csv) or os.path.getsize(spe_fp_output_csv) == 0:
+                    results = []
+                    for idx, row in fp_df.iterrows():
+                        text = row.get("Visit", "")
+                        empi = row.get("empi", None)
 
-          if "evidence" in result_df.columns:
-            result_df["is_meaningful"] = result_df["evidence"].apply(
-                lambda x: is_meaningful_paragraph(x) if pd.notna(x) else False
-            )
-            filtered_df = result_df[result_df["is_meaningful"]].copy()
-            filtered_df.to_csv(clean_output_csv, index=False)
-            print(f"{len(filtered_df)} meaningful evidence paragraphs kept")
-          else:
-            filtered_df = pd.DataFrame()
-            print("No evidence column found in specificity evidence CSV.")
+                        if pd.isna(text) or str(text).strip() == "":
+                            continue
 
-          if not os.path.exists(p_output_file_path):
+                        try:
+                            print(f"  SpecAgent processing FP note {idx+1}/{len(fp_df)} (empi={empi})")
+                            print(text)
+                            evidence = specificity_agent(Backend, text, SOP)
+                            print(evidence)
+                            results.append({"empi": empi, "evidence": evidence})
+                        except Exception as e:
+                            logging.exception(f"specificity_agent failed for fp row {idx}: {e}")
+                            results.append({"empi": empi, "evidence": None})
 
-            if filtered_df.empty:
-                print("No meaningful specificity evidence produced; keeping current prompt.")
-                new_prompt = current_prompt
-            else:
-                try:
-                    print(f"Calling summarizer_specificity with {len(filtered_df)} items")
-                    new_prompt = summarizer_specificity(
-                        Backend,
-                        filtered_df["evidence"].tolist(),
-                        current_prompt,
-                        SOP
+                    result_df = pd.DataFrame(results)
+                    result_df.to_csv(spe_fp_output_csv, index=False)
+                    print(f"? FP specificity evidence saved to {spe_fp_output_csv}")
+
+                else:
+                    result_df = pd.read_csv(spe_fp_output_csv)
+                    print(f"? Loaded existing specificity evidence CSV ({len(result_df)} rows)")
+
+                if "evidence" in result_df.columns:
+                    result_df["is_meaningful"] = result_df["evidence"].apply(
+                        lambda x: is_meaningful_paragraph(x) if pd.notna(x) else False
                     )
-                    print(f"Summarizer returned {len(new_prompt)} characters")
-                except Exception as e:
-                    logging.exception(f"summarizer_specificity failed: {e}")
-                    new_prompt = current_prompt + "\n# (specificity summarizer failed; prompt unchanged)"
+                    filtered_df = result_df[result_df["is_meaningful"]].copy()
+                    filtered_df.to_csv(clean_output_csv, index=False)
+                    print(f"{len(filtered_df)} meaningful evidence paragraphs kept")
+                else:
+                    filtered_df = pd.DataFrame()
+                    print("No evidence column found in specificity evidence CSV.")
 
-            with open(os.path.join(specificity_output_folder, f"ap{improver_iter}_raw.txt"), "w") as f:
-                f.write(new_prompt)
+                if not os.path.exists(p_output_file_path):
+                    if filtered_df.empty:
+                        print("No meaningful specificity evidence produced; keeping current prompt.")
+                        new_prompt = current_prompt
+                    else:
+                        try:
+                            print(f"Calling summarizer_specificity with {len(filtered_df)} items")
+                            print(filtered_df["evidence"])
+                            new_prompt = summarizer_specificity(
+                                Backend,
+                                filtered_df["evidence"].tolist(),
+                                current_prompt,
+                                SOP
+                            )
+                            print(f"Summarizer returned {len(new_prompt)} characters")
+                        except Exception as e:
+                            logging.exception(f"summarizer_specificity failed: {e}")
+                            new_prompt = current_prompt + "\n# (specificity summarizer failed; prompt unchanged)"
 
-            current_prompt = clean_prompt(new_prompt)
+                    with open(os.path.join(specificity_output_folder, f"ap{improver_iter}_raw.txt"), "w", encoding="utf-8") as f:
+                        f.write(new_prompt)
 
-            with open(p_output_file_path, "w") as f:
-                f.write(current_prompt)
+                    current_prompt = clean_prompt(new_prompt)
 
-            print(f"NEW SPECIFICITY PROMPT SAVED: {p_output_file_path}")
-            logging.info(f"new specificity prompt saved: {p_output_file_path}")
+                    with open(p_output_file_path, "w", encoding="utf-8") as f:
+                        f.write(current_prompt)
 
-        else:
-            print(f"Prompt already exists: {p_output_file_path}")
+                    print(f"NEW SPECIFICITY PROMPT SAVED: {p_output_file_path}")
+                    logging.info(f"new specificity prompt saved: {p_output_file_path}")
+                else:
+                    print(f"Prompt already exists: {p_output_file_path}")
 
         previous_sensitivity = current_sensitivity
         previous_specificity = current_specificity

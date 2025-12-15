@@ -4,8 +4,11 @@ import glob
 import logging
 import re
 from typing import Dict, List, Optional, Tuple
-
 import pandas as pd
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 
 from utility.utils import is_meaningful_paragraph, clean_prompt
 from agents.specialist import evaluate_cognitive_concerns
@@ -13,9 +16,9 @@ from utility.evaluation import (
     preprocess_data,
     get_patient_data,
     calculate_metrics,
-    save_fn_fp,
     full_save_fn_fp,
     read_patient_outputs,
+    normalize_label,
 )
 
 def validation_workflow(
@@ -47,7 +50,7 @@ def validation_workflow(
     print("Starting validation workflow...")
 
     if os.path.isfile(BasePrompt):
-        with open(BasePrompt, "r") as f:
+        with open(BasePrompt, "r", encoding="utf-8") as f:
             current_prompt = f.read()
     else:
         current_prompt = BasePrompt
