@@ -1,14 +1,15 @@
 from core.agentic_workflow import run_agentic_workflow
 from core.validation_workflow import validation_workflow
+from core.split import split_csv_folder
 import os
 
 def Pythia(LLMbackend, dev_data_path, val_data_path, output_dir, SOP, initial_prompt, iterations = None, sens_threshold = None, spec_threshold = None, priority = None):
     if iterations is None:
         iterations = 5
     if sens_threshold is None:
-        sens_threshold = 0.9
+        sens_threshold = 0.75
     if spec_threshold is None:
-        spec_threshold = 0.9
+        spec_threshold = 0.75
     if priority is None:
         priority = "specificity"
     print("Beginning prompt development...")
@@ -40,7 +41,7 @@ def Pythia(LLMbackend, dev_data_path, val_data_path, output_dir, SOP, initial_pr
         prompt_file = os.path.join(iter_dir, folder, f"ap{iter}.txt")
 
         if os.path.exists(prompt_file):
-            with open(prompt_file, "r") as file:
+            with open(prompt_file, "r", encoding="utf-8") as file:
                 finalPrompt = file.read()
             break
 

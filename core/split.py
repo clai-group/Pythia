@@ -47,10 +47,10 @@ def split_csv_folder(
     os.makedirs(val_folder, exist_ok=True)
 
     for f in dev_files:
-        shutil.copy(os.path.join(source_folder, f), dev_folder)
+        shutil.move(os.path.join(source_folder, f), dev_folder)
 
     for f in val_files:
-        shutil.copy(os.path.join(source_folder, f), val_folder)
+        shutil.move(os.path.join(source_folder, f), val_folder)
 
     return dev_folder, val_folder
 
