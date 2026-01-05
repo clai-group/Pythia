@@ -3,7 +3,7 @@ from google import genai
 from google.genai import types
 from .base import BaseLLM
 
-class GeminiBackend(BaseLLM):
+class gemini_backend(BaseLLM):
     def __init__(self, model="gemini-1.5-pro", api_key=None, temperature: float = 0.0, max_tokens: int = 2048):
         self.model = model
         self.client = genai.Client(api_key=api_key)

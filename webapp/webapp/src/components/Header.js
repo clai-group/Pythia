@@ -57,7 +57,7 @@ const Header = () => {
               gap: '12px'
             }}
           >
-            <div className="logo-mark">🧠</div>
+            <img src={process.env.PUBLIC_URL + '/pythiaLogo192.png'} alt="Pythia Logo" style={{ width: '32px', height: '32px' }} />
             <div style={{ textAlign: 'left' }}>
               <div style={{ color: '#0f172a' }}>Pythia</div>
               <div style={{ fontSize: '12px', color: '#64748b', letterSpacing: 0 }}>Agentic prompt refinement</div>

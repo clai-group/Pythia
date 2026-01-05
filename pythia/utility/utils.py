@@ -1,6 +1,3 @@
-import logging
-#import torch
-#from transformers import AutoTokenizer, AutoModelForCausalLM
 import re
 
 def is_meaningful_paragraph(text):
@@ -21,7 +18,7 @@ def is_meaningful_paragraph(text):
     if digit_ratio > 0.5:
         return False
 
-    # Avoid high repetition (e.g., same word many times)
+    # Avoid high repetition 
     words = text.lower().split()
     unique_word_ratio = len(set(words)) / len(words) if words else 0
     if unique_word_ratio < 0.3:

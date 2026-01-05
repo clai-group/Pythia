@@ -1,6 +1,5 @@
-import requests
 from .base import BaseLLM
-from ollama import chat, ChatResponse, Client
+from ollama import Client
 
 class ollama_backend(BaseLLM):
     def __init__(self, model="llama3.2",  base_url = "http://localhost:11434", temperature: float = 0.0, max_tokens: int = 2048):

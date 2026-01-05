@@ -80,27 +80,24 @@ const Installation = () => {
             python -m venv .venv<br/>
             source .venv/bin/activate  <span className="comment"># Windows: .venv\Scripts\activate</span>
           </div>
-          <h4>Step 2: Install dependencies</h4>
+          <h4>Step 2: Install Pythia</h4>
           <div className="code-snippet">
-            <span className="comment"># Placeholder: add/adjust requirements as needed</span><br/>
-            pip install -r requirements.txt
+            pip install pythia-tool
           </div>
           <h4>Step 3: Run the agentic workflow with the sample dataset</h4>
           <div className="code-snippet">
             <span className="comment"># Fill in your backend client and paths</span><br/>
-            python - &lt;&lt;'PY'<br/>
-            from Pythia import Pythia<br/>
+            from pythia import Pythia<br/>
             # TODO: instantiate your LLM backend<br/>
-            backend = None  # replace with OpenAI/Anthropic client<br/>
+            backend = None  # replace with your client<br/>
             Pythia(<br/>
             &nbsp;&nbsp;LLMbackend=backend,<br/>
-            &nbsp;&nbsp;dev_data_path="data/dev_notes.csv",<br/>
-            &nbsp;&nbsp;val_data_path="data/val_notes.csv",<br/>
+            &nbsp;&nbsp;dev_data_path="data/dev_notes/",<br/>
+            &nbsp;&nbsp;val_data_path="data/val_notes/",<br/>
             &nbsp;&nbsp;output_dir="outputs",<br/>
             &nbsp;&nbsp;SOP="docs/sop.txt",<br/>
             &nbsp;&nbsp;initial_prompt="Base prompt text",<br/>
             )<br/>
-            PY
           </div>
         </div>
       </div>
