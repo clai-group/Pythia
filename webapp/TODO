@@ -1,0 +1,50 @@
+Tasks to finalize Pythia webapp (replace placeholders and media):
+
+1) webapp/webapp/public/manifest.json
+   - Replace favicon.ico/logo192.png/logo512.png with final Pythia icons (ensure matching sizes and theme colors).
+
+2) webapp/webapp/public/index.html
+   - Update <link rel="icon"> to final logo filename/location.
+
+3) webapp/webapp/src/components/Header.js
+   - Set PAPER_LINK to real paper URL.
+   - Swap logo mark with final logo asset (if using an image instead of emoji).
+
+4) webapp/webapp/src/components/Hero.js
+   - Set PAPER_LINK to real paper URL.
+   - Replace hero visual placeholder with final image at public/assets/hero-visual.png (and adjust path if needed).
+   - Update contactEmail with final inbox.
+
+5) webapp/webapp/src/components/Paper.js
+   - Set paperLink to final PDF/arXiv/DOI.
+   - Replace author list placeholder with final authors.
+
+6) webapp/webapp/src/components/Demos.js
+   - Place new demo videos at public/assets/videos/{pythia_overview.mp4, pythia_prompt_refinement.mp4} or adjust paths/names, add more videos if desired.
+
+7) webapp/webapp/src/components/Explanation.js
+   - Provide workflow diagram image at public/assets/agent-loop.png.
+   - Provide results figure at public/assets/results-visual.png.
+
+8) webapp/webapp/src/components/ArchitectureDiagram.js
+   - Provide architecture image at public/assets/architecture.png.
+
+9) webapp/webapp/src/components/Installation.js
+    - Add real setup video or remove placeholder overlay; ensure video path matches.
+    - Replace inline sample code with real installation and running instructions for Pythia, backend setup...
+    - Ideally, include a dummy example dataset so people can run the pipeline end-to-end.
+    - Create a requirements.txt in the repo, as well as a comprehensive readme with the usage instructions. Dockerize if desired to simplify setup.
+
+10) webapp/webapp/src/components/Citation.js
+    - Fill in final citation strings, authors, year, URL/arXiv ID.
+
+11) webapp/webapp/src/components/CTA.js
+    - Think about what do you want to ask here, if collaboration and expansion of the GitHub, user studies...
+
+12) webapp/webapp/src/components/Footer.js
+    - Check everything is accurate, license and organization name.
+
+
+ONCE APP IS READY TO DEPLOY:
+- If deploying on github, uncomment the yaml file in webapp, move to .github/workflows/ and test it deploys. Configure GitHub to allow pages from the settings of the repo, and set the url in package.json. Probably something unexpected will come up during deployment, so allow for time to test and fix.
+- If deploying elsewhere (GCP, AWS, local server in MGB...), set up the deployment pipeline as needed.
