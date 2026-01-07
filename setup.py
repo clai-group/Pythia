@@ -10,9 +10,9 @@ if os.path.isfile(requirement_path):
 
 setup(
     name='pythia_tool',
-    version='1.0.0',
+    version='1.0.1',
     author="Cameron Cagan",
-    author_email="",
+    author_email="ccagan@mgh.harvard.edu",
     description="An LLM driven prompt improvement tool for optimizing LLM applications.",
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",

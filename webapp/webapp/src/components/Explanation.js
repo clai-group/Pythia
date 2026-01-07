@@ -23,10 +23,7 @@ const Explanation = () => {
             </ul>
           </div>
           <div className="screenshot-container">
-            <div className="asset-placeholder">
-              <div>Workflow diagram placeholder</div>
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>Upload agent loop graphic to public/assets/agent-loop.png</div>
-            </div>
+            <img src={`${process.env.PUBLIC_URL}/assets/agent-loop.png`} alt="Agent Loop Workflow Diagram" />
           </div>
         </div>
 

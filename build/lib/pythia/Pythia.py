@@ -99,26 +99,3 @@ def Pythia(LLMbackend, dev_data_path, val_data_path, output_dir, SOP, initial_pr
         raise
     
     print("Completed evaluation on Validation Data.")   
-
-if __name__ == "__main__":
-    print("Starting script")
-    # Example usage
-    from pythia.llm.pythia_ollama import ollama_backend
-    backend = ollama_backend(
-            model="llama3.1",
-            base_url="http://localhost:11434",
-            temperature=0.1,
-            max_tokens=2048
-        )
-    Pythia(
-            LLMbackend=backend,
-            dev_data_path='dummy_data/dev',
-            val_data_path='dummy_data/val',
-            output_dir="retest",
-            SOP="Is the patient having chest pains, etc?",
-            initial_prompt="Is the patient showing signs of a cardiology concern?",
-            iterations=5,
-            sens_threshold=0.8,
-            spec_threshold=0.8,
-            priority="specificity"
-        )

@@ -12,7 +12,7 @@ Tasks to finalize Pythia webapp (replace placeholders and media):
 
 4) webapp/webapp/src/components/Hero.js
    - Set PAPER_LINK to real paper URL.
-   - Replace hero visual placeholder with final image at public/assets/hero-visual.png (and adjust path if needed).
+   - Replace hero visual placeholder with final image at public/assets/hero-visual.png (and adjust path if needed).   
    - Update contactEmail with final inbox.
 
 5) webapp/webapp/src/components/Paper.js
@@ -33,7 +33,7 @@ Tasks to finalize Pythia webapp (replace placeholders and media):
     - Add real setup video or remove placeholder overlay; ensure video path matches.
     - Replace inline sample code with real installation and running instructions for Pythia, backend setup...
     - Ideally, include a dummy example dataset so people can run the pipeline end-to-end.
-    - Create a requirements.txt in the repo, as well as a comprehensive readme with the usage instructions. Dockerize if desired to simplify setup.
+   .
 
 10) webapp/webapp/src/components/Citation.js
     - Fill in final citation strings, authors, year, URL/arXiv ID.

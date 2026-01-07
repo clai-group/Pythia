@@ -3,3 +3,7 @@ PythiaEnv/
 __pycache__/
 *.pyc
 .DS_Store
+build/
+dist/
+test_output/
+test_output_2/
