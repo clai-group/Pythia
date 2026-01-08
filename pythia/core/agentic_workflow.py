@@ -196,16 +196,6 @@ def run_agentic_workflow(
             
             df_pt["final_answer"] = pd.to_numeric(df_pt["final_answer"], errors="coerce").fillna(0).astype(int)
             logging.info(f"Final answer counts:\n{df_pt['final_answer'].value_counts(dropna=False)}")
-            
-            # Map response column to 0/1 for visit-level filtering in FN/FP analysis
-            # This is only used for FN/FP identification, not for final metrics
-            df_pt["response"] = df_pt["response"].astype(str).str.strip().str.lower()
-            response_map = {
-                "yes": 1, "yes.": 1, "1": 1, "true": 1,
-                "no": 0, "no.": 0, "0": 0, "false": 0
-            }
-            df_pt["response"] = df_pt["response"].map(response_map)
-            logging.info(f"Response column mapped for FN/FP analysis:\n{df_pt['response'].value_counts(dropna=False)}")
         except Exception as e:
             logging.exception(f"Error normalizing label columns: {e}")
             raise
