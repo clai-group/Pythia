@@ -103,7 +103,7 @@ def preprocess_data(df):
     return df
 
 def get_patient_data(df):
-    df_pt = df[['empi', 'Ground Truth', 'response', 'final_answer']].drop_duplicates()
+    df_pt = df[['empi', 'Ground Truth', 'final_answer']].drop_duplicates()
     logging.info(f"Patient-level Data Shape: {df_pt.shape}")
     logging.info(f"Answer Value Counts:\n{df_pt.final_answer.value_counts()}\n")
     return df_pt
