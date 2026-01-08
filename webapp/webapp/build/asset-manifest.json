@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/pythia/static/css/main.5dbb6989.css",
+    "main.js": "/pythia/static/js/main.14f20703.js",
+    "index.html": "/pythia/index.html",
+    "main.5dbb6989.css.map": "/pythia/static/css/main.5dbb6989.css.map",
+    "main.14f20703.js.map": "/pythia/static/js/main.14f20703.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.5dbb6989.css",
+    "static/js/main.14f20703.js"
+  ]
+}
