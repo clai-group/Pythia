@@ -764,6 +764,48 @@ nav {
     flex-shrink: 0;
 }
 
+/* Output prompt cards */
+.output-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    margin-top: 24px;
+}
+
+.output-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.output-card h4 {
+    margin-bottom: 12px;
+    font-size: 20px;
+    color: #0f172a;
+}
+
+.output-card p {
+    color: #475569;
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 16px;
+}
+
+.output-card .explanation-features {
+    margin-bottom: 18px;
+}
+
+.output-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 18px 0 10px;
+}
+
 .screenshot-container {
     position: relative;
     border-radius: 16px;
@@ -1069,6 +1111,10 @@ footer {
     }
 
     .demo-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .output-grid {
         grid-template-columns: 1fr;
     }
 

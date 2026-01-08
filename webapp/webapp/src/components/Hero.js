@@ -12,7 +12,7 @@ const Hero = () => {
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText('git clone https://github.com/clai-group/Pythia.git')
+    navigator.clipboard.writeText('pip install pythia-tool')
       .then(() => {
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
@@ -36,8 +36,8 @@ const Hero = () => {
         <div className="hero-content">
           <div className="hero-text">
             <h1>Meet Pythia</h1>
-            <p className="subtitle">An agentic LLM workflow that flags cognitive concern signals hidden in everyday clinical notes.</p>
-            <p className="description">Five collaborating agents iteratively refine prompts for sensitivity, specificity, and clinical reasoning—then benchmark against expert-guided baselines and re-adjudicated labels.</p>
+            <p className="subtitle">An iterative tool that helps your LLM improve its own prompts using the datasets and targets you provide.</p>
+            <p className="description">Pythia runs a multi-agent loop to test prompts, learn from false positives and false negatives, and deliver stronger, reusable prompts without manual tweaking.</p>
             <div className="hero-cta-group">
               <button onClick={handlePaperClick} className="cta-button">
                 <span>📄</span> Read Paper
@@ -46,7 +46,7 @@ const Hero = () => {
                 <span role="img" aria-label={isCopied ? 'check mark' : 'laptop'}>
                   {isCopied ? '✅' : '💻'}
                 </span>
-                {isCopied ? 'Copied!' : 'Copy git clone pythia'}
+                {isCopied ? 'Copied!' : 'Copy pip command'}
               </button>
             </div>
           </div>

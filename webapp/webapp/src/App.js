@@ -6,7 +6,6 @@ import Paper from './components/Paper';
 import Demos from './components/Demos';
 import Explanation from './components/Explanation';
 import Citation from './components/Citation';
-import CTA from './components/CTA';
 import Footer from './components/Footer';
 import Installation from './components/Installation';
 
@@ -100,7 +99,6 @@ function App() {
       <Explanation />
       <Installation />
       <Citation />
-      <CTA />
       <Footer />
     </div>
   );

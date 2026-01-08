@@ -8,7 +8,7 @@ const Paper = () => {
       <div className="container">
         <div className="section-header fade-in">
           <h2>Research Paper</h2>
-          <p>Agentic prompt refinement for cognitive concern detection in clinical notes.</p>
+          <p>Agentic prompt refinement against labeled data and validation with XYZ (depending on ArXiv paper).</p>
         </div>
 
         <div className="paper-preview fade-in" onClick={() => window.open(paperLink, '_blank', 'noopener,noreferrer')}>
@@ -16,22 +16,22 @@ const Paper = () => {
             <div className="arxiv-badge">Preprint</div>
             <div className="paper-id">Link pending</div>
           </div>
-          <h3 className="paper-title">Autonomous Agentic LLM Workflow for Cognitive Concern Detection</h3>
-          <div className="paper-authors">Author list placeholder — update with final authorship</div>
+          <h3 className="paper-title">Coming soon...</h3>
+          <div className="paper-authors">Coming soon...</div>
           <div className="paper-abstract">
-            ABSTRACT PLACEHOLDER          </div>
+            Coming soon...          </div>
           <div className="paper-stats">
             <div className="paper-stat">
               <span>📊</span>
-              <span>Refinement: 2,228 notes (50% positive); Validation: 1,110 notes (33% positive)</span>
+              <span>Results box 1</span>
             </div>
             <div className="paper-stat">
               <span>✅</span>
-              <span>Expert-guided (XP3) validation: F1 0.81, Sens 0.82, Spec 0.93 (post re-adjudication)</span>
+              <span>Results box 2</span>
             </div>
             <div className="paper-stat">
               <span>🤖</span>
-              <span>Agentic (AP3) validation: F1 0.74, Sens 0.62, Spec 0.98 with transparent agent logs</span>
+              <span>Results box 3</span>
             </div>
           </div>
         </div>

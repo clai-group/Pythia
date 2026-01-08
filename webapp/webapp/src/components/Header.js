@@ -66,33 +66,33 @@ const Header = () => {
         </div>
         <ul className="nav-links">
           <li><button onClick={() => scrollToSection('paper')}>Paper</button></li>
-          <li><button onClick={() => scrollToSection('demos')}>Workflow</button></li>
-      <li><button onClick={() => scrollToSection('installation')}>Run Pythia</button></li>
-    </ul>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-      <a
-        href={`mailto:${contactEmail}`}
-        style={{
-          background: '#0052ff',
-          color: '#fff',
-          textDecoration: 'none',
-          fontWeight: 600,
-          padding: '10px 14px',
-          borderRadius: '8px',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          boxShadow: '0 6px 16px rgba(0, 82, 255, 0.25)'
-        }}
-      >
-        <span>✉️</span>
-        <span>{contactEmail}</span>
-      </a>
-      <a href={REPO_LINK} target="_blank" rel="noopener noreferrer" className="btn-github">
-        <span className="star-count">{stars.toLocaleString()} ⭐</span> Star on GitHub
-      </a>
-    </div>
-  </nav>
+          <li><button onClick={() => scrollToSection('demos')}>What is Pythea?</button></li>
+          <li><button onClick={() => scrollToSection('installation')}>Try Pythia yourself!</button></li>
+        </ul>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <a
+            href={`mailto:${contactEmail}`}
+            style={{
+              background: '#0052ff',
+              color: '#fff',
+              textDecoration: 'none',
+              fontWeight: 600,
+              padding: '10px 14px',
+              borderRadius: '8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 6px 16px rgba(0, 82, 255, 0.25)'
+            }}
+          >
+            <span>✉️</span>
+            <span>{contactEmail}</span>
+          </a>
+          <a href={REPO_LINK} target="_blank" rel="noopener noreferrer" className="btn-github">
+            <span className="star-count">{stars.toLocaleString()} ⭐</span> Star on GitHub
+          </a>
+        </div>
+      </nav>
     </header>
   );
 };

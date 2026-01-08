@@ -6,7 +6,7 @@ const ArchitectureDiagram = () => {
       <div className="container">
         <div className="section-header fade-in">
           <h2>Architecture Overview</h2>
-          <p>How the agentic workflow coordinates sensitivity, specificity, and clinical reasoning agents.</p>
+          <p>How the agentic workflow coordinates sensitivity, specificity, and reasoning agents.</p>
         </div>
 
         <div className="architecture-diagram fade-in">

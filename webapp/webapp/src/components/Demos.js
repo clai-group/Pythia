@@ -3,8 +3,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 const Demos = () => {
   const videoContainersRef = useRef([]);
   const videos = useMemo(() => [
-    { url: 'pythia_overview.mp4', duration: 'xxx min' },
-    { url: 'pythia_prompt_refinement.mp4', duration: 'xxx min' }
+    { url: 'pythia_overview.mp4', duration: 'xxx min', title: '1. Workflow Overview', description: 'How the five-agent architecture collaborates to optimize prompts for cognitive concern detection without human-in-the-loop tweaks.' }
   ], []);
 
   useEffect(() => {
@@ -49,32 +48,23 @@ const Demos = () => {
     <section className="demo-section" id="demos">
       <div className="container">
         <div className="section-header fade-in">
-          <h2>See the agentic loop in action</h2>
-          <p>Step-by-step walkthroughs of how Pythia refines prompts, adjudicates disagreements, and reports performance.</p>
+          <h2>What is Pythia?</h2>
+          <p>Step-by-step explanation of how Pythia refines prompts, adjudicates disagreements, and reports performance.</p>
         </div>
 
-        <div className="demo-grid">
-          <div className="demo-card fade-in">
-            <div className="video-container" ref={el => videoContainersRef.current[0] = el}>
-              <div className="video-overlay">1:40 min</div>
-              <div className="play-button"></div>
+        <div className="demo-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr)', justifyItems: 'center' }}>
+          {videos.map((video, index) => (
+            <div className="demo-card fade-in" key={video.url} style={{ width: '100%', maxWidth: '860px' }}>
+              <div className="video-container" ref={el => videoContainersRef.current[index] = el}>
+                <div className="video-overlay">{video.duration}</div>
+                <div className="play-button"></div>
+              </div>
+              <div className="demo-content">
+                <h3>{video.title}</h3>
+                <p>{video.description}</p>
+              </div>
             </div>
-            <div className="demo-content">
-              <h3>1. Workflow Overview</h3>
-              <p>How the five-agent architecture collaborates to optimize prompts for cognitive concern detection without human-in-the-loop tweaks.</p>
-            </div>
-          </div>
-
-          <div className="demo-card fade-in">
-            <div className="video-container" ref={el => videoContainersRef.current[1] = el}>
-              <div className="video-overlay">2:10 min</div>
-              <div className="play-button"></div>
-            </div>
-            <div className="demo-content">
-              <h3>2. Prompt Refinement Loop</h3>
-              <p>Watch sensitivity and specificity agents iterate on prompts, while the specialist agent preserves clinical reasoning paths.</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

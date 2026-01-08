@@ -17,6 +17,7 @@ const Citation = () => {
       url={https://example.com/pythia-paper},
 }`
   };
+  const isPlaceholder = true;
 
   const handleCopy = (format) => {
     navigator.clipboard.writeText(citations[format])
@@ -34,7 +35,6 @@ const Citation = () => {
       <div className="container">
         <div className="section-header">
           <h2>Cite this work</h2>
-          <p>Please update the placeholders below once the manuscript is posted.</p>
         </div>
 
         <div className="citation-grid">
@@ -44,12 +44,13 @@ const Citation = () => {
               <button
                 onClick={() => handleCopy('bibtex')}
                 className={`copy-btn ${copiedFormat === 'bibtex' ? 'copied' : ''}`}
+                disabled={isPlaceholder}
               >
-                {copiedFormat === 'bibtex' ? '✓ Copied!' : '📋 Copy'}
+                {isPlaceholder ? 'Coming soon' : (copiedFormat === 'bibtex' ? '✓ Copied!' : '📋 Copy')}
               </button>
             </div>
             <div className="citation-text bibtex-text">
-              <pre>{citations.bibtex}</pre>
+              <pre>{isPlaceholder ? 'Coming soon...' : citations.bibtex}</pre>
             </div>
           </div>
         </div>
