@@ -61,13 +61,13 @@ const Hero = () => {
                         <div className="traffic-light yellow"></div>
                         <div className="traffic-light green"></div>
                       </div>
-                      <div className="app-title">Pythia Agentic Loop</div>
                     </div>
                     <div className="dashboard-image-container">
-                      <div className="asset-placeholder">
-                        <div>Hero visual placeholder</div>
-                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>Drop hero image at public/assets/hero-visual.png</div>
-                      </div>
+                      <img
+                        src={`${process.env.PUBLIC_URL}/assets/Hero-Visual.jpg`}
+                        alt="Logo"
+                        style={{ width: '100%', height: 'auto' }}
+                      />
                     </div>
                   </div>
                 </div>
