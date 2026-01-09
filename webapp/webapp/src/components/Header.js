@@ -66,7 +66,7 @@ const Header = () => {
         </div>
         <ul className="nav-links">
           <li><button onClick={() => scrollToSection('paper')}>Paper</button></li>
-          <li><button onClick={() => scrollToSection('demos')}>What is Pythea?</button></li>
+          <li><button onClick={() => scrollToSection('demos')}>What is Pythia?</button></li>
           <li><button onClick={() => scrollToSection('installation')}>Try Pythia yourself!</button></li>
         </ul>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
