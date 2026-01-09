@@ -10,19 +10,17 @@ const ArchitectureDiagram = () => {
         </div>
 
         <div className="architecture-diagram fade-in">
-          <div
-            className="asset-placeholder"
+          <img
+            src={`${process.env.PUBLIC_URL}/assets/architecture.png`}
+            alt="Architecture Diagram"
             style={{
               width: '80%',
               maxWidth: '800px',
-              height: '280px',
+              height: 'auto',
               display: 'block',
               margin: '0 auto'
             }}
-          >
-            <div>Architecture diagram placeholder</div>
-            <div style={{ fontSize: '12px', color: '#94a3b8' }}>Place final diagram at public/assets/architecture.png</div>
-          </div>
+          />
         </div>
       </div>
     </section>
