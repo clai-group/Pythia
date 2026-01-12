@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 
 const Header = () => {
   const REPO_LINK = 'https://github.com/clai-group/Pythia';
-  const contactEmail = 'pythia@clai.group'; // Replace with your contact email
+  const contactEmail = 'ccagan@mgh.harvard.edu';
 
   const [stars, setStars] = useState(3);
 
