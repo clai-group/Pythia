@@ -39,9 +39,9 @@ const Hero = () => {
             <p className="subtitle">An iterative tool that helps your LLM improve its own prompts using the datasets and targets you provide.</p>
             <p className="description">Pythia runs a multi-agent loop to test prompts, learn from false positives and false negatives, and deliver stronger, reusable prompts without manual tweaking.</p>
             <div className="hero-cta-group">
-              <button onClick={handlePaperClick} className="cta-button">
+              {/* <button onClick={handlePaperClick} className="cta-button">
                 <span>📄</span> Read Paper
-              </button>
+              </button> */}
               <button onClick={copyToClipboard} className="cta-button-secondary">
                 <span role="img" aria-label={isCopied ? 'check mark' : 'laptop'}>
                   {isCopied ? '✅' : '💻'}
