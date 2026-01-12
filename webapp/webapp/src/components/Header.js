@@ -86,7 +86,7 @@ const Header = () => {
             }}
           >
             <span>✉️</span>
-            <span>{contactEmail}</span>
+            <span>Contact Us</span>
           </a>
           <a href={REPO_LINK} target="_blank" rel="noopener noreferrer" className="btn-github">
             <span className="star-count">{stars.toLocaleString()} ⭐</span> Star on GitHub
