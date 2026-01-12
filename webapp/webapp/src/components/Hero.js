@@ -22,13 +22,13 @@ const Hero = () => {
       });
   };
 
-  const handlePaperClick = () => {
-    if (paperLink) {
-      window.open(paperLink, '_blank', 'noopener,noreferrer');
-    } else {
-      handleScroll('paper');
-    }
-  };
+  // const handlePaperClick = () => {
+  //   if (paperLink) {
+  //     window.open(paperLink, '_blank', 'noopener,noreferrer');
+  //   } else {
+  //     handleScroll('paper');
+  //   }
+  // };
 
   return (
     <section className="hero">
