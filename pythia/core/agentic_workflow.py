@@ -4,7 +4,7 @@ import glob
 import logging
 import pandas as pd
 from pythia.utility.utils import is_meaningful_paragraph, clean_prompt
-from pythia.agents.specialist import evaluate_cognitive_concerns
+from pythia.agents.specialist import evaluate_note
 from pythia.utility.evaluation import (
     preprocess_data,
     get_patient_data,
@@ -144,7 +144,7 @@ def run_agentic_workflow(
 
                 try:
                     t0 = time.time()
-                    response = evaluate_cognitive_concerns(Backend, current_prompt + "\n" + SOP, report_text)
+                    response = evaluate_note(Backend, current_prompt + "\n" + SOP, report_text)
                     subset_df.at[row_idx, "response"] = response
                     logging.info(f"Specialist done for {patient_id}, row {row_idx}, t(s)={(time.time()-t0):.2f}")
                 except Exception as e:

@@ -1,7 +1,7 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 
 
-def evaluate_cognitive_concerns (backend, prompt, information):
+def evaluate_note (backend, prompt, information):
     
     system= SystemMessage(content="You are a specialized medical agent. Answer the question with just a yes or no.")
     human= HumanMessage(content=f"{prompt}\n\n{information}")

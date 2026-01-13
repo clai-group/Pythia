@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pythia.agents.specialist import evaluate_cognitive_concerns
+from pythia.agents.specialist import evaluate_note
 from pythia.utility.evaluation import (
     preprocess_data,
     get_patient_data,
@@ -78,7 +78,7 @@ def validation_workflow(
             if pd.isna(text) or str(text).strip() == "":
                 continue
             try:
-                df.at[idx, "response"] = evaluate_cognitive_concerns(
+                df.at[idx, "response"] = evaluate_note(
                     Backend, current_prompt + "\n" + SOP, text
                 )
             except Exception as e:
