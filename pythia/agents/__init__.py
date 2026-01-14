@@ -1,3 +1,3 @@
-from pythia.agents.specialist import evaluate_cognitive_concerns
+from pythia.agents.specialist import evaluate_note
 from pythia.agents.sensitivity import sensitivity_agent, summarizer_sensitivity
 from pythia.agents.specificity import specificity_agent, summarizer_specificity

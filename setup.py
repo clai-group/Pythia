@@ -10,7 +10,7 @@ if os.path.isfile(requirement_path):
 
 setup(
     name='pythia_tool',
-    version='1.0.1',
+    version='1.0.2',
     author="Cameron Cagan",
     author_email="ccagan@mgh.harvard.edu",
     description="An LLM driven prompt improvement tool for optimizing LLM applications.",
@@ -46,5 +46,6 @@ setup(
     extras_require={
         "ollama": ["ollama"],  # Adjust based on actual optional deps
         "google": ["google-auth", "google-genai"],
+        "openai": ["openai"],
     },
 )
