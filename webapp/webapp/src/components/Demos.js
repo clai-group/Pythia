@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 const Demos = () => {
   const videoContainersRef = useRef([]);
   const videos = useMemo(() => [
-    { url: 'Pythia_Video.mp4', duration: 'xxx min', title: '1. Workflow Overview', description: 'How the five-agent architecture collaborates to optimize prompts for cognitive concern detection without human-in-the-loop tweaks.' }
+    { url: 'Pythia_Video.mp4', duration: 'xxx min', title: '1. Workflow Overview', description: 'A visual introduction to the Pythia package.' }
   ], []);
 
   useEffect(() => {
