@@ -46,7 +46,7 @@ Output only the extracted evidence explaining why this is NOT a positive case.""
         answer = response
     return answer
 
-def summarizer_specificity(backend, evidence_list, prompt, sop):
+def summarizer_specificity(backend, evidence_list, prompt, sop, rejected_prompts=None):
     """
     Improve the prompt based on false positive evidence.
     Goal: Make the prompt more SPECIFIC (reduce false alarms).
@@ -56,17 +56,23 @@ def summarizer_specificity(backend, evidence_list, prompt, sop):
         evidence_list: List of evidence strings from false positives
         prompt: Current prompt
         sop: Standard Operating Procedure
+        rejected_prompts: List of prompts that performed worse (optional)
     
     Returns:
         Improved prompt that is more specific (fewer false positives)
     """
     evidence_text = "\n---\n".join(evidence_list)
     
+    rejected_context = ""
+    if rejected_prompts and len(rejected_prompts) > 0:
+        rejected_text = "\n---\n".join(rejected_prompts)
+        rejected_context = f"\n\nPREVIOUSLY REJECTED PROMPTS (which performed worse):\n{rejected_text}\n\nLearn from these failures - improve upon them but avoid the same mistakes."
+    
     system = SystemMessage(content="""You are an expert in clinical decision support and prompt engineering.
 Your task is to improve a screening prompt based on evidence from false positive cases.
 
 The goal is to increase SPECIFICITY (reduce false positives/false alarms) while maintaining sensitivity.
-Be specific and actionable in your improvements.""")
+Be specific and actionable in your improvements. Make sure sensitivity does not drop.""")
     
     human = HumanMessage(content=f"""We have a screening prompt that is generating FALSE POSITIVES (high false alarm rate).
 
@@ -76,7 +82,7 @@ EVIDENCE FROM FALSE POSITIVE CASES:
 {evidence_text}
 
 Current prompt:
-{prompt}
+{prompt}{rejected_context}
 
 Standard Operating Procedure:
 {sop}
@@ -89,6 +95,7 @@ Instructions:
 5. Make the prompt more restrictive/specific to reduce false alarms
 6. Add clarity about required conditions and exclude borderline/ambiguous cases
 7. Do NOT sacrifice too much sensitivity - try to maintain a balance
+8. If rejected prompts are shown, avoid making the same mistakes they did
 
 Output ONLY the improved prompt, with no explanations or commentary.""")
     

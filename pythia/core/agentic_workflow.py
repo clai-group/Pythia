@@ -92,10 +92,18 @@ def run_agentic_workflow(
 
    
     iter = 1
+    rejected_prompts = []
     previous_specificity = None
     previous_sensitivity = None
     current_specificity = 0.0
     current_sensitivity = 0.0
+    previous_prompt = current_prompt  # Track the prompt from previous iteration
+    previous_fn_df = None  # Track FN data from previous iteration
+    previous_fp_df = None  # Track FP data from previous iteration
+    previous_fn_evidence_csv = None  # Track path to previous FN evidence CSV
+    previous_fp_evidence_csv = None  # Track path to previous FP evidence CSV
+    previous_fn_clean_csv = None  # Track path to previous FN cleaned evidence CSV
+    previous_fp_clean_csv = None  # Track path to previous FP cleaned evidence CSV
 
     while iter <= Iterations and (
         current_specificity < specificity_threshold or current_sensitivity < sensitivity_threshold
@@ -236,13 +244,54 @@ def run_agentic_workflow(
             f"FN={len(fn_df)}, FP={len(fp_df)}"
         )
         logging.info(debug_msg)
-        print(debug_msg)
+
+        # Check if current prompt is less effective than previous and add to rejected list
+        prompt_reverted = False
+        reverted_fn_evidence_csv = None
+        reverted_fp_evidence_csv = None
+        reverted_fn_clean_csv = None
+        reverted_fp_clean_csv = None
+        
+        if iter > 1:  # Not the first iteration
+            sensitivity_worse = previous_sensitivity is not None and current_sensitivity < previous_sensitivity
+            specificity_worse = previous_specificity is not None and current_specificity < previous_specificity
+            
+            if sensitivity_worse or specificity_worse:
+                logging.info(
+                    f"Prompt degradation detected (iter {iter}): "
+                    f"Sens {previous_sensitivity:.4f}->{current_sensitivity:.4f}, "
+                    f"Spec {previous_specificity:.4f}->{current_specificity:.4f}. "
+                    f"Reverting to previous prompt and re-running improvers with previous iteration's evidence."
+                )
+                rejected_prompts.append(current_prompt)
+                current_prompt = previous_prompt  # Revert to the previous good prompt
+                
+                # Restore previous iteration's FN/FP evidence
+                if previous_fn_df is not None and previous_fp_df is not None:
+                    fn_df = previous_fn_df.copy()
+                    fp_df = previous_fp_df.copy()
+                    logging.info(f"Restored FN/FP evidence from previous iteration (FN={len(fn_df)}, FP={len(fp_df)})")
+                    print(f"Using previous iteration's evidence: {len(fn_df)} FN cases, {len(fp_df)} FP cases")
+                else:
+                    logging.warning("Previous iteration's FN/FP data not available, using current iteration's data")
+                
+                # Store paths to previous evidence files to use instead of current iteration's
+                reverted_fn_evidence_csv = previous_fn_evidence_csv
+                reverted_fp_evidence_csv = previous_fp_evidence_csv
+                reverted_fn_clean_csv = previous_fn_clean_csv
+                reverted_fp_clean_csv = previous_fp_clean_csv
+                
+                prompt_reverted = True
+                print(f"Prompt degradation detected. Reverted to previous prompt. Added degraded prompt to rejected list (total rejected: {len(rejected_prompts)})")
 
         improver_iter = iter
 
         #Sensitivity improver
         if (priority == "sensitivity" and current_sensitivity < sensitivity_threshold) or (priority == "specificity" and current_specificity > specificity_threshold and current_sensitivity < sensitivity_threshold):
             print(f"\nENTERING SENSITIVITY IMPROVER for iteration {improver_iter} | Current Sensitivity: {current_sensitivity:.4f}")
+            if prompt_reverted:
+                logging.info(f"Running sensitivity improver on REVERTED prompt (due to degradation detection)")
+                print(f"(Running on reverted prompt due to degradation)")
             logging.info(f"Entering sensitivity improver (iter {improver_iter}) | Sens={current_sensitivity:.4f} | FN notes={len(fn_df)}")
 
             sensitivity_output_folder = os.path.join(output_folder, f"sensitivity_iter_{improver_iter}")
@@ -250,6 +299,13 @@ def run_agentic_workflow(
             sst_fn_output_csv = os.path.join(sensitivity_output_folder, f"sensitivity_iter_{improver_iter}_result.csv")
             clean_output_csv = os.path.join(sensitivity_output_folder, f"sensitivity_iter_{improver_iter}_result_cleaned.csv")
             p_output_file_path = os.path.join(sensitivity_output_folder, f"ap{improver_iter}.txt")
+            
+            # Use reverted evidence CSVs if available (from degradation reversion)
+            if prompt_reverted and reverted_fn_evidence_csv:
+                sst_fn_output_csv = reverted_fn_evidence_csv
+                clean_output_csv = reverted_fn_clean_csv
+                logging.info(f"Using reverted evidence CSV: {sst_fn_output_csv}")
+            
             if fn_df.empty:
                 logging.warning("FN dataframe empty; skipping sensitivity improver.")
             else:
@@ -296,6 +352,7 @@ def run_agentic_workflow(
                                 filtered_df["evidence"].tolist(),
                                 current_prompt,
                                 SOP,
+                                rejected_prompts,
                             )
                             print(f"Summarizer returned {len(new_prompt)} characters")
                         except Exception as e:
@@ -311,16 +368,31 @@ def run_agentic_workflow(
                     logging.info(f"new sensitivity prompt saved: {p_output_file_path}")
                 else:
                     print(f"Prompt already exists: {p_output_file_path}")
+        
+        # Track evidence CSV paths for potential reversion in next iteration
+        if not fn_df.empty:
+            sensitivity_output_folder = os.path.join(base_output_path, f"iter_{iter}_{Backend.__class__.__name__}", f"sensitivity_iter_{iter}")
+            previous_fn_evidence_csv = os.path.join(sensitivity_output_folder, f"sensitivity_iter_{iter}_result.csv")
+            previous_fn_clean_csv = os.path.join(sensitivity_output_folder, f"sensitivity_iter_{iter}_result_cleaned.csv")
 
         #Specificity improver
         if (priority == "specificity" and current_specificity < specificity_threshold) or (priority == "sensitivity" and current_sensitivity > sensitivity_threshold and current_specificity < specificity_threshold):
             print(f"\nENTERING SPECIFICITY IMPROVER for iteration {improver_iter} | Current Specificity: {current_specificity:.4f}")
+            if prompt_reverted:
+                logging.info(f"Running specificity improver on REVERTED prompt (due to degradation detection)")
+                print(f"(Running on reverted prompt due to degradation)")
             logging.info(f"Entering specificity improver (iter {improver_iter}) | Spec={current_specificity:.4f} | FP notes={len(fp_df)}")
             specificity_output_folder = os.path.join(output_folder, f"specificity_iter_{improver_iter}")
             os.makedirs(specificity_output_folder, exist_ok=True)
             spe_fp_output_csv = os.path.join(specificity_output_folder, f"specificity_iter_{improver_iter}_result.csv")
             clean_output_csv = os.path.join(specificity_output_folder, f"specificity_iter_{improver_iter}_result_cleaned.csv")
             p_output_file_path = os.path.join(specificity_output_folder, f"ap{improver_iter}.txt")
+            
+            # Use reverted evidence CSVs if available (from degradation reversion)
+            if prompt_reverted and reverted_fp_evidence_csv:
+                spe_fp_output_csv = reverted_fp_evidence_csv
+                clean_output_csv = reverted_fp_clean_csv
+                logging.info(f"Using reverted evidence CSV: {spe_fp_output_csv}")
             
             if fp_df.empty:
                 print("No false-positive rows to use for specificity improver.")
@@ -368,12 +440,12 @@ def run_agentic_workflow(
                     else:
                         try:
                             print(f"Calling summarizer_specificity with {len(filtered_df)} items")
-                            print(filtered_df["evidence"])
                             new_prompt = summarizer_specificity(
                                 Backend,
                                 filtered_df["evidence"].tolist(),
                                 current_prompt,
-                                SOP
+                                SOP,
+                                rejected_prompts
                             )
                             print(f"Summarizer returned {len(new_prompt)} characters")
                         except Exception as e:
@@ -393,8 +465,19 @@ def run_agentic_workflow(
                 else:
                     print(f"Prompt already exists: {p_output_file_path}")
 
+        # Track evidence CSV paths for potential reversion in next iteration
+        if not fp_df.empty:
+            specificity_output_folder = os.path.join(base_output_path, f"iter_{iter}_{Backend.__class__.__name__}", f"specificity_iter_{iter}")
+            previous_fp_evidence_csv = os.path.join(specificity_output_folder, f"specificity_iter_{iter}_result.csv")
+            previous_fp_clean_csv = os.path.join(specificity_output_folder, f"specificity_iter_{iter}_result_cleaned.csv")
+
         previous_sensitivity = current_sensitivity
         previous_specificity = current_specificity
+        previous_prompt = current_prompt  # Save the prompt before next iteration's improvers potentially change it
+        previous_fn_df = fn_df.copy() if not fn_df.empty else None  # Save FN evidence for potential reversion
+        previous_fp_df = fp_df.copy() if not fp_df.empty else None  # Save FP evidence for potential reversion
+        # Note: We don't save evidence CSV paths here because they may not exist yet if improvers didn't run
+        # Instead, we'll track them inside the improver blocks and update them at iteration end
         iter += 1
 
         if current_sensitivity >= sensitivity_threshold and current_specificity >= specificity_threshold:
