@@ -3,6 +3,7 @@ from pythia.core.validation_workflow import validation_workflow
 import os
 import glob
 import re
+import pandas as pd
 
 def Pythia(LLMbackend, dev_data_path, val_data_path, output_dir, SOP, initial_prompt, iterations = None, sens_threshold = None, spec_threshold = None, priority = None):
     if iterations is None:
@@ -12,7 +13,7 @@ def Pythia(LLMbackend, dev_data_path, val_data_path, output_dir, SOP, initial_pr
     if spec_threshold is None:
         spec_threshold = 0.75
     if priority is None:
-        priority = "specificity"
+        priority = "sensitivity"
     
     if not hasattr(LLMbackend, 'invoke'):
         raise ValueError("LLMbackend must have an 'invoke' method.")
@@ -66,23 +67,69 @@ def Pythia(LLMbackend, dev_data_path, val_data_path, output_dir, SOP, initial_pr
     )
 
     finalPrompt = None
+    best_metrics = {"iteration": None, "metrics_file": None, "sensitivity": 0.0, "specificity": 0.0, "f1_score": 0.0}
 
-    # Find all ap*.txt files in output
-    pattern = os.path.join(dev_output_base, "*", "*", "ap*.txt")
-    files = glob.glob(pattern)
-    if files:
-        def get_iter(file_path):
-            match = re.search(r'ap(\d+)\.txt', file_path)
-            return int(match.group(1)) if match else 0
-        files.sort(key=get_iter, reverse=True)
-        try:
-            with open(files[0], "r", encoding="utf-8") as file:
-                finalPrompt = file.read()
-        except IOError as e:
-            print(f"Error reading prompt file {files[0]}: {e}")
-
+    # Find all metrics_results.csv files and select the iteration with best metrics
+    metrics_pattern = os.path.join(dev_output_base, "*", "evaluation_*", "metrics_results.csv")
+    metrics_files = glob.glob(metrics_pattern)
+    print(f"DEBUG: Looking for metrics in pattern: {metrics_pattern}")
+    print(f"DEBUG: Found {len(metrics_files)} metrics files")
+    
+    if metrics_files:
+        for metrics_file in metrics_files:
+            try:
+                df_metrics = pd.read_csv(metrics_file)
+                if df_metrics.empty:
+                    continue
+                
+                # Get metrics from the first row (or you can aggregate if multiple rows)
+                sensitivity = float(df_metrics.iloc[0].get("Sensitivity", 0.0))
+                specificity = float(df_metrics.iloc[0].get("Specificity", 0.0))
+                f1_score = float(df_metrics.iloc[0].get("F1 Score", 0.0))
+                
+                # Extract iteration number from file path
+                match = re.search(r'iter_(\d+)', metrics_file)
+                iteration = int(match.group(1)) if match else 0
+                
+                # Select based on F1 score
+                if f1_score > best_metrics["f1_score"] or best_metrics["iteration"] is None:
+                    best_metrics["iteration"] = iteration
+                    best_metrics["metrics_file"] = metrics_file
+                    best_metrics["sensitivity"] = sensitivity
+                    best_metrics["specificity"] = specificity
+                    best_metrics["f1_score"] = f1_score
+                    
+            except Exception as e:
+                print(f"Error reading metrics from {metrics_file}: {e}")
+                continue
+    
+    # If best metrics found, load the corresponding prompt
+    if best_metrics["iteration"] is not None:
+        print(f"Best performing iteration: {best_metrics['iteration']} "
+              f"(F1 Score: {best_metrics['f1_score']:.4f}, Sensitivity: {best_metrics['sensitivity']:.4f}, Specificity: {best_metrics['specificity']:.4f})")
+        
+        best_iter = best_metrics['iteration']
+        
+        # Try to find prompt starting from best iteration and going backwards
+        for iter_to_check in range(best_iter, 0, -1):
+            prompt_pattern = os.path.join(dev_output_base, f"iter_{iter_to_check}_*", "*", f"ap{iter_to_check}.txt")
+            prompt_files = glob.glob(prompt_pattern)
+            
+            if prompt_files:
+                try:
+                    with open(prompt_files[0], "r", encoding="utf-8") as file:
+                        finalPrompt = file.read()
+                    if iter_to_check == best_iter:
+                        print(f"Loaded prompt from best-performing iteration {best_iter}")
+                    else:
+                        print(f"Iteration {best_iter} had no prompt; loaded from earlier iteration {iter_to_check}")
+                    break
+                except IOError as e:
+                    print(f"Error reading prompt file {prompt_files[0]}: {e}")
+                    continue
+    
     if not finalPrompt:
-      print("Could not find final prompt file, using baseprompt...")
+      print("Could not find final prompt in any iteration, using base prompt...")
       finalPrompt = initial_prompt
       
     print("Beginning evaluation on Validation Data...")
@@ -97,5 +144,4 @@ def Pythia(LLMbackend, dev_data_path, val_data_path, output_dir, SOP, initial_pr
     except Exception as e:
         print(f"Error during validation workflow: {e}")
         raise
-    
     print("Completed evaluation on Validation Data.")   

@@ -3,6 +3,7 @@ import time
 import glob
 import logging
 import pandas as pd
+import json
 from pythia.utility.utils import is_meaningful_paragraph, clean_prompt
 from pythia.agents.specialist import evaluate_note
 from pythia.utility.evaluation import (
@@ -59,8 +60,46 @@ def run_agentic_workflow(
     else:
         current_prompt = BasePrompt
 
-    base_output_path = os.path.join(output_path, f"output_{os.path.basename(os.path.normpath(input_data_path))}")
+    candidate_base = os.path.join(output_path, f"output_{os.path.basename(os.path.normpath(input_data_path))}")
+    use_existing = False
+    if os.path.isdir(output_path):
+        if os.path.exists(os.path.join(output_path, "workflow_checkpoint.json")):
+            use_existing = True
+        elif os.path.exists(os.path.join(output_path, "patient_level")):
+            use_existing = True
+        elif glob.glob(os.path.join(output_path, "iter_*")):
+            use_existing = True
+
+    if use_existing:
+        base_output_path = output_path
+        logging.info(f"Reusing existing output folder: {base_output_path}")
+    else:
+        base_output_path = candidate_base
+        logging.info(f"Creating namespaced output folder: {base_output_path}")
+
     os.makedirs(base_output_path, exist_ok=True)
+
+    checkpoint_path = os.path.join(base_output_path, "workflow_checkpoint.json")
+
+    def save_checkpoint(state: dict):
+        try:
+            tmp_path = checkpoint_path + ".tmp"
+            with open(tmp_path, "w", encoding="utf-8") as fh:
+                json.dump(state, fh, indent=2)
+            os.replace(tmp_path, checkpoint_path)
+            logging.info(f"Saved checkpoint to {checkpoint_path}")
+        except Exception:
+            logging.exception("Failed to write checkpoint file")
+
+    def load_checkpoint() -> dict:
+        if not os.path.exists(checkpoint_path):
+            return {}
+        try:
+            with open(checkpoint_path, "r", encoding="utf-8") as fh:
+                return json.load(fh)
+        except Exception:
+            logging.exception("Failed to load checkpoint file; ignoring")
+            return {}
 
     log_file = os.path.join(
         base_output_path,
@@ -97,13 +136,56 @@ def run_agentic_workflow(
     previous_sensitivity = None
     current_specificity = 0.0
     current_sensitivity = 0.0
-    previous_prompt = current_prompt  # Track the prompt from previous iteration
-    previous_fn_df = None  # Track FN data from previous iteration
-    previous_fp_df = None  # Track FP data from previous iteration
-    previous_fn_evidence_csv = None  # Track path to previous FN evidence CSV
-    previous_fp_evidence_csv = None  # Track path to previous FP evidence CSV
-    previous_fn_clean_csv = None  # Track path to previous FN cleaned evidence CSV
-    previous_fp_clean_csv = None  # Track path to previous FP cleaned evidence CSV
+    previous_prompt = current_prompt 
+    previous_fn_df = None  
+    previous_fp_df = None
+    previous_fn_evidence_csv = None
+    previous_fp_evidence_csv = None
+    previous_fn_clean_csv = None
+    previous_fp_clean_csv = None  
+    last_improver_processed_fn_evidence = None
+    last_improver_processed_fp_evidence = None
+    last_improver_processed_fn_clean = None
+    last_improver_processed_fp_clean = None
+
+    #Checkpoint
+    ck = load_checkpoint()
+    if ck:
+        try:
+            logging.info(f"Found checkpoint; restoring state from {checkpoint_path}")
+            iter = int(ck.get("iter", iter))
+            current_prompt = ck.get("current_prompt", current_prompt)
+            previous_prompt = ck.get("previous_prompt", previous_prompt)
+            rejected_prompts = ck.get("rejected_prompts", rejected_prompts)
+            current_sensitivity = float(ck.get("current_sensitivity", current_sensitivity))
+            current_specificity = float(ck.get("current_specificity", current_specificity))
+            previous_sensitivity = ck.get("previous_sensitivity", previous_sensitivity)
+            previous_specificity = ck.get("previous_specificity", previous_specificity)
+
+            prev_fn_csv = ck.get("previous_fn_csv")
+            prev_fp_csv = ck.get("previous_fp_csv")
+            if prev_fn_csv and os.path.exists(prev_fn_csv):
+                try:
+                    previous_fn_df = pd.read_csv(prev_fn_csv)
+                    previous_fn_evidence_csv = prev_fn_csv
+                except Exception:
+                    logging.exception("Failed to read previous_fn_csv from checkpoint")
+            if prev_fp_csv and os.path.exists(prev_fp_csv):
+                try:
+                    previous_fp_df = pd.read_csv(prev_fp_csv)
+                    previous_fp_evidence_csv = prev_fp_csv
+                except Exception:
+                    logging.exception("Failed to read previous_fp_csv from checkpoint")
+
+            last_improver_processed_fn_evidence = ck.get("last_improver_processed_fn_evidence")
+            last_improver_processed_fp_evidence = ck.get("last_improver_processed_fp_evidence")
+            last_improver_processed_fn_clean = ck.get("last_improver_processed_fn_clean")
+            last_improver_processed_fp_clean = ck.get("last_improver_processed_fp_clean")
+
+            logging.info(f"Restored checkpoint: iter={iter}, sens={current_sensitivity}, spec={current_specificity}")
+            print(f"Resuming from checkpoint: iter={iter}, sens={current_sensitivity:.4f}, spec={current_specificity:.4f}")
+        except Exception:
+            logging.exception("Error while restoring checkpoint; starting fresh")
 
     while iter <= Iterations and (
         current_specificity < specificity_threshold or current_sensitivity < sensitivity_threshold
@@ -236,7 +318,6 @@ def run_agentic_workflow(
             fn_df = pd.DataFrame()
             fp_df = pd.DataFrame()
 
-        #improver block
         debug_msg = (
             f"DEBUG before improver: priority={priority}, "
             f"current_sens={current_sensitivity:.4f}/{sensitivity_threshold}, "
@@ -245,14 +326,13 @@ def run_agentic_workflow(
         )
         logging.info(debug_msg)
 
-        # Check if current prompt is less effective than previous and add to rejected list
         prompt_reverted = False
         reverted_fn_evidence_csv = None
         reverted_fp_evidence_csv = None
         reverted_fn_clean_csv = None
         reverted_fp_clean_csv = None
         
-        if iter > 1:  # Not the first iteration
+        if iter > 1:
             sensitivity_worse = previous_sensitivity is not None and current_sensitivity < previous_sensitivity
             specificity_worse = previous_specificity is not None and current_specificity < previous_specificity
             
@@ -264,9 +344,8 @@ def run_agentic_workflow(
                     f"Reverting to previous prompt and re-running improvers with previous iteration's evidence."
                 )
                 rejected_prompts.append(current_prompt)
-                current_prompt = previous_prompt  # Revert to the previous good prompt
+                current_prompt = previous_prompt
                 
-                # Restore previous iteration's FN/FP evidence
                 if previous_fn_df is not None and previous_fp_df is not None:
                     fn_df = previous_fn_df.copy()
                     fp_df = previous_fp_df.copy()
@@ -275,11 +354,15 @@ def run_agentic_workflow(
                 else:
                     logging.warning("Previous iteration's FN/FP data not available, using current iteration's data")
                 
-                # Store paths to previous evidence files to use instead of current iteration's
-                reverted_fn_evidence_csv = previous_fn_evidence_csv
-                reverted_fp_evidence_csv = previous_fp_evidence_csv
-                reverted_fn_clean_csv = previous_fn_clean_csv
-                reverted_fp_clean_csv = previous_fp_clean_csv
+                reverted_fn_evidence_csv = last_improver_processed_fn_evidence
+                reverted_fp_evidence_csv = last_improver_processed_fp_evidence
+                reverted_fn_clean_csv = last_improver_processed_fn_clean
+                reverted_fp_clean_csv = last_improver_processed_fp_clean
+                
+                if reverted_fn_evidence_csv:
+                    logging.info(f"Using last improver-processed FN evidence: {reverted_fn_evidence_csv}")
+                if reverted_fp_evidence_csv:
+                    logging.info(f"Using last improver-processed FP evidence: {reverted_fp_evidence_csv}")
                 
                 prompt_reverted = True
                 print(f"Prompt degradation detected. Reverted to previous prompt. Added degraded prompt to rejected list (total rejected: {len(rejected_prompts)})")
@@ -300,11 +383,12 @@ def run_agentic_workflow(
             clean_output_csv = os.path.join(sensitivity_output_folder, f"sensitivity_iter_{improver_iter}_result_cleaned.csv")
             p_output_file_path = os.path.join(sensitivity_output_folder, f"ap{improver_iter}.txt")
             
-            # Use reverted evidence CSVs if available (from degradation reversion)
             if prompt_reverted and reverted_fn_evidence_csv:
                 sst_fn_output_csv = reverted_fn_evidence_csv
                 clean_output_csv = reverted_fn_clean_csv
                 logging.info(f"Using reverted evidence CSV: {sst_fn_output_csv}")
+            
+            sensitivity_improver_ran = False
             
             if fn_df.empty:
                 logging.warning("FN dataframe empty; skipping sensitivity improver.")
@@ -345,6 +429,7 @@ def run_agentic_workflow(
                         print("No meaningful evidence produced; keeping current prompt.")
                         new_prompt = current_prompt
                     else:
+                        sensitivity_improver_ran = True
                         try:
                             print(f"Calling summarizer_sensitivity with {len(filtered_df)} items")
                             new_prompt = summarizer_sensitivity(
@@ -368,12 +453,27 @@ def run_agentic_workflow(
                     logging.info(f"new sensitivity prompt saved: {p_output_file_path}")
                 else:
                     print(f"Prompt already exists: {p_output_file_path}")
-        
-        # Track evidence CSV paths for potential reversion in next iteration
-        if not fn_df.empty:
-            sensitivity_output_folder = os.path.join(base_output_path, f"iter_{iter}_{Backend.__class__.__name__}", f"sensitivity_iter_{iter}")
-            previous_fn_evidence_csv = os.path.join(sensitivity_output_folder, f"sensitivity_iter_{iter}_result.csv")
-            previous_fn_clean_csv = os.path.join(sensitivity_output_folder, f"sensitivity_iter_{iter}_result_cleaned.csv")
+            
+            if sensitivity_improver_ran:
+                last_improver_processed_fn_evidence = sst_fn_output_csv
+                last_improver_processed_fn_clean = clean_output_csv
+                logging.info(f"Tracked sensitivity improver-processed FN evidence: {sst_fn_output_csv}")
+                save_checkpoint({
+                    "iter": iter,
+                    "current_prompt": current_prompt,
+                    "previous_prompt": previous_prompt,
+                    "rejected_prompts": rejected_prompts,
+                    "current_sensitivity": current_sensitivity,
+                    "current_specificity": current_specificity,
+                    "previous_sensitivity": previous_sensitivity,
+                    "previous_specificity": previous_specificity,
+                    "previous_fn_csv": None,
+                    "previous_fp_csv": None,
+                    "last_improver_processed_fn_evidence": last_improver_processed_fn_evidence,
+                    "last_improver_processed_fp_evidence": last_improver_processed_fp_evidence,
+                    "last_improver_processed_fn_clean": last_improver_processed_fn_clean,
+                    "last_improver_processed_fp_clean": last_improver_processed_fp_clean,
+                })
 
         #Specificity improver
         if (priority == "specificity" and current_specificity < specificity_threshold) or (priority == "sensitivity" and current_sensitivity > sensitivity_threshold and current_specificity < specificity_threshold):
@@ -388,11 +488,12 @@ def run_agentic_workflow(
             clean_output_csv = os.path.join(specificity_output_folder, f"specificity_iter_{improver_iter}_result_cleaned.csv")
             p_output_file_path = os.path.join(specificity_output_folder, f"ap{improver_iter}.txt")
             
-            # Use reverted evidence CSVs if available (from degradation reversion)
             if prompt_reverted and reverted_fp_evidence_csv:
                 spe_fp_output_csv = reverted_fp_evidence_csv
                 clean_output_csv = reverted_fp_clean_csv
                 logging.info(f"Using reverted evidence CSV: {spe_fp_output_csv}")
+            
+            specificity_improver_ran = False
             
             if fp_df.empty:
                 print("No false-positive rows to use for specificity improver.")
@@ -438,6 +539,7 @@ def run_agentic_workflow(
                         print("No meaningful specificity evidence produced; keeping current prompt.")
                         new_prompt = current_prompt
                     else:
+                        specificity_improver_ran = True
                         try:
                             print(f"Calling summarizer_specificity with {len(filtered_df)} items")
                             new_prompt = summarizer_specificity(
@@ -464,20 +566,64 @@ def run_agentic_workflow(
                     logging.info(f"new specificity prompt saved: {p_output_file_path}")
                 else:
                     print(f"Prompt already exists: {p_output_file_path}")
-
-        # Track evidence CSV paths for potential reversion in next iteration
-        if not fp_df.empty:
-            specificity_output_folder = os.path.join(base_output_path, f"iter_{iter}_{Backend.__class__.__name__}", f"specificity_iter_{iter}")
-            previous_fp_evidence_csv = os.path.join(specificity_output_folder, f"specificity_iter_{iter}_result.csv")
-            previous_fp_clean_csv = os.path.join(specificity_output_folder, f"specificity_iter_{iter}_result_cleaned.csv")
+            
+            if specificity_improver_ran:
+                last_improver_processed_fp_evidence = spe_fp_output_csv
+                last_improver_processed_fp_clean = clean_output_csv
+                logging.info(f"Tracked specificity improver-processed FP evidence: {spe_fp_output_csv}")
+                save_checkpoint({
+                    "iter": iter,
+                    "current_prompt": current_prompt,
+                    "previous_prompt": previous_prompt,
+                    "rejected_prompts": rejected_prompts,
+                    "current_sensitivity": current_sensitivity,
+                    "current_specificity": current_specificity,
+                    "previous_sensitivity": previous_sensitivity,
+                    "previous_specificity": previous_specificity,
+                    "previous_fn_csv": None,
+                    "previous_fp_csv": None,
+                    "last_improver_processed_fn_evidence": last_improver_processed_fn_evidence,
+                    "last_improver_processed_fp_evidence": last_improver_processed_fp_evidence,
+                    "last_improver_processed_fn_clean": last_improver_processed_fn_clean,
+                    "last_improver_processed_fp_clean": last_improver_processed_fp_clean,
+                })
 
         previous_sensitivity = current_sensitivity
         previous_specificity = current_specificity
-        previous_prompt = current_prompt  # Save the prompt before next iteration's improvers potentially change it
-        previous_fn_df = fn_df.copy() if not fn_df.empty else None  # Save FN evidence for potential reversion
-        previous_fp_df = fp_df.copy() if not fp_df.empty else None  # Save FP evidence for potential reversion
-        # Note: We don't save evidence CSV paths here because they may not exist yet if improvers didn't run
-        # Instead, we'll track them inside the improver blocks and update them at iteration end
+        previous_prompt = current_prompt
+        previous_fn_df = fn_df.copy() if not fn_df.empty else None 
+        previous_fp_df = fp_df.copy() if not fp_df.empty else None  
+        # persist previous FN/FP to checkpoint
+        prev_fn_csv = None
+        prev_fp_csv = None
+        try:
+            if previous_fn_df is not None and not previous_fn_df.empty:
+                prev_fn_csv = os.path.join(base_output_path, f"prev_fn_iter_{iter}.csv")
+                previous_fn_df.to_csv(prev_fn_csv, index=False)
+            if previous_fp_df is not None and not previous_fp_df.empty:
+                prev_fp_csv = os.path.join(base_output_path, f"prev_fp_iter_{iter}.csv")
+                previous_fp_df.to_csv(prev_fp_csv, index=False)
+        except Exception:
+            logging.exception("Failed to write prev FN/FP csv for checkpointing")
+
+        # save checkpoint marking iteration complete
+        save_checkpoint({
+            "iter": iter + 1,
+            "current_prompt": current_prompt,
+            "previous_prompt": previous_prompt,
+            "rejected_prompts": rejected_prompts,
+            "current_sensitivity": current_sensitivity,
+            "current_specificity": current_specificity,
+            "previous_sensitivity": previous_sensitivity,
+            "previous_specificity": previous_specificity,
+            "previous_fn_csv": prev_fn_csv,
+            "previous_fp_csv": prev_fp_csv,
+            "last_improver_processed_fn_evidence": last_improver_processed_fn_evidence,
+            "last_improver_processed_fp_evidence": last_improver_processed_fp_evidence,
+            "last_improver_processed_fn_clean": last_improver_processed_fn_clean,
+            "last_improver_processed_fp_clean": last_improver_processed_fp_clean,
+        })
+
         iter += 1
 
         if current_sensitivity >= sensitivity_threshold and current_specificity >= specificity_threshold:

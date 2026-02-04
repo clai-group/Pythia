@@ -65,7 +65,7 @@ def summarizer_sensitivity(backend, evidence_list, prompt, sop, rejected_prompts
     rejected_context = ""
     if rejected_prompts and len(rejected_prompts) > 0:
         rejected_text = "\n---\n".join(rejected_prompts)
-        rejected_context = f"\n\nPREVIOUSLY REJECTED PROMPTS (which performed worse):\n{rejected_text}\n\nLearn from these failures - improve upon them but avoid the same mistakes."
+        rejected_context = f"\n\nPREVIOUSLY REJECTED PROMPTS (which performed worse):\n{rejected_text}\n\nThese are prompts that you've previously generated, but made the performance worse."
     
     system = SystemMessage(content="""You are an expert in clinical decision support and prompt engineering.
 Your task is to improve a screening prompt based on evidence from cases we missed.
@@ -95,7 +95,7 @@ Instructions:
 6. Do NOT make the prompt overly broad - stayrelevant
 7. If rejected prompts are shown, avoid making the same mistakes they did
 
-Output ONLY the improved prompt, with no explanations or commentary.""")
+Output ONLY the improved prompt, with no explanations or commentary. Make sure that the improvements do not sacrifice specificity in order to improve sensitivity.""")
     
     messages = [system, human]
     llm = backend
