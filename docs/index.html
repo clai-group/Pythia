@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pythia — Automated Prompt Optimization</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    :root {
+      --bg:        #f5efe8;
+      --bg-card:   #ece6dd;
+      --accent:    #c84b31;
+      --text:      #1c1c1c;
+      --muted:     #6b6b6b;
+      --light:     #999;
+      --border:    #ddd5cb;
+      --serif:     'Playfair Display', Georgia, serif;
+      --sans:      'Inter', system-ui, sans-serif;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── BANNER ── */
+    .banner {
+      background: var(--accent);
+      color: #fff;
+      text-align: center;
+      padding: 11px 56px;
+      font-size: 14px;
+      position: relative;
+    }
+    .banner a { color: #fff; text-decoration: underline; }
+    .banner-close {
+      position: absolute; right: 18px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; color: #fff;
+      font-size: 20px; cursor: pointer; line-height: 1; padding: 2px 6px;
+      opacity: 0.8;
+    }
+    .banner-close:hover { opacity: 1; }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-logo {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 22px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .nav-links {
+      display: flex;
+      gap: 36px;
+      list-style: none;
+    }
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 400;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--accent); }
+    .nav-cta {
+      display: inline-block;
+      border: 1px solid var(--text);
+      background: none;
+      padding: 8px 22px;
+      font-size: 14px;
+      font-family: var(--sans);
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text);
+      border-radius: 4px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-cta:hover { background: var(--text); color: #fff; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 82vh;
+      background:
+        radial-gradient(ellipse at 78% 28%, rgba(195,115,40,0.28) 0%, transparent 48%),
+        radial-gradient(ellipse at 88% 68%, rgba(140,72,18,0.32) 0%, transparent 42%),
+        radial-gradient(ellipse at 55% 82%, rgba(80,38,8,0.25) 0%, transparent 38%),
+        radial-gradient(ellipse at 20% 35%, rgba(50,25,5,0.2) 0%, transparent 35%),
+        linear-gradient(148deg, #0c0904 0%, #161108 38%, #211608 65%, #0c0804 100%);
+      display: flex;
+      align-items: center;
+      padding: 96px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 18%; right: 12%;
+      width: 360px; height: 360px;
+      background: radial-gradient(circle, rgba(210,145,55,0.14) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 14%; right: 32%;
+      width: 220px; height: 220px;
+      background: radial-gradient(circle, rgba(175,95,28,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      max-width: 540px;
+      position: relative;
+      z-index: 1;
+    }
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      color: rgba(255,255,255,0.45);
+    }
+    .hero h1 {
+      font-family: var(--serif);
+      font-size: clamp(2.4rem, 4.8vw, 3.8rem);
+      font-weight: 400;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 24px;
+    }
+    .hero p {
+      font-size: 16px;
+      color: rgba(255,255,255,0.65);
+      line-height: 1.75;
+      margin-bottom: 44px;
+      max-width: 420px;
+    }
+    .btn-ghost-light {
+      display: inline-block;
+      border: 1px solid rgba(255,255,255,0.55);
+      color: #fff;
+      padding: 12px 30px;
+      font-size: 14px;
+      font-family: var(--sans);
+      text-decoration: none;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .btn-ghost-light:hover { background: rgba(255,255,255,0.1); }
+
+    /* ── PLATFORM ── */
+    .platform {
+      padding: 100px 80px;
+      background: var(--bg);
+    }
+    .platform .eyebrow { color: var(--muted); }
+    .platform h2 {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 3.5vw, 3rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 64px;
+      max-width: 580px;
+    }
+    .platform-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+
+    /* accordion */
+    .accordion-item { border-top: 1px solid var(--border); }
+    .accordion-item:last-child { border-bottom: 1px solid var(--border); }
+    .accordion-btn {
+      width: 100%; background: none; border: none; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 0;
+      font-family: var(--sans);
+      font-size: 15px;
+      color: var(--muted);
+      text-align: left;
+      transition: color 0.15s;
+    }
+    .accordion-btn.is-open { color: var(--text); }
+    .accordion-btn .acc-indicator {
+      flex-shrink: 0;
+      width: 18px; height: 2px;
+      background: var(--border);
+      margin-left: 16px;
+      transition: background 0.15s;
+      position: relative;
+    }
+    .accordion-btn.is-open .acc-indicator { background: var(--accent); }
+    .accordion-body {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.32s ease;
+    }
+    .accordion-body-inner {
+      padding: 0 0 22px 0;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* demo card */
+    .demo-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 28px 28px 24px;
+      font-family: var(--sans);
+    }
+    .demo-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+    .demo-card-title { font-size: 13px; color: var(--muted); }
+    .demo-pill {
+      display: inline-block;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 11px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .demo-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      font-size: 13px;
+    }
+    .demo-label { color: var(--muted); }
+    .demo-val   { font-weight: 500; }
+    .demo-accent { color: var(--accent); font-weight: 500; }
+    .demo-hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+    .demo-section-label { font-size: 12px; color: var(--light); margin-bottom: 6px; }
+    .iter-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 4px 0;
+      color: var(--text);
+    }
+    .iter-row .demo-label { font-size: 12px; }
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 1px 7px;
+      border-radius: 10px;
+      background: #e8e0d6;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+    .badge-best { background: #fde8e2; color: var(--accent); }
+    .demo-footer { font-size: 11px; color: var(--light); margin-top: 16px; line-height: 1.5; }
+
+    /* ── ABOUT DARK ── */
+    .about-dark {
+      min-height: 58vh;
+      background:
+        radial-gradient(ellipse at 65% 25%, rgba(185,105,35,0.26) 0%, transparent 50%),
+        radial-gradient(ellipse at 18% 72%, rgba(100,52,14,0.3) 0%, transparent 48%),
+        linear-gradient(155deg, #0c0904 0%, #1a1308 48%, #0c0804 100%);
+      display: flex;
+      align-items: center;
+      padding: 100px 80px;
+    }
+    .about-dark-content { max-width: 660px; }
+    .about-dark .eyebrow { color: rgba(255,255,255,0.38); }
+    .about-dark h2 {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      font-weight: 400;
+      color: #fff;
+      line-height: 1.2;
+      margin-bottom: 28px;
+    }
+    .about-dark p {
+      font-size: 16px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.8;
+      margin-bottom: 44px;
+      max-width: 500px;
+    }
+
+    /* ── RESEARCH ── */
+    .research {
+      padding: 100px 80px;
+      background: var(--bg);
+    }
+    .research-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+    .research .eyebrow { color: var(--muted); }
+    .research h2 {
+      font-family: var(--serif);
+      font-size: clamp(1.9rem, 3.2vw, 2.9rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 22px;
+    }
+    .research p {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.8;
+      margin-bottom: 36px;
+    }
+    .btn-ghost-dark {
+      display: inline-block;
+      border: 1px solid var(--text);
+      color: var(--text);
+      padding: 12px 28px;
+      font-size: 14px;
+      font-family: var(--sans);
+      text-decoration: none;
+      border-radius: 4px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-ghost-dark:hover { background: var(--text); color: #fff; }
+
+    .code-block {
+      background: #1c1812;
+      border-radius: 10px;
+      padding: 30px;
+      overflow-x: auto;
+    }
+    .code-block pre {
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 12.5px;
+      line-height: 1.75;
+      color: #ddd0b2;
+      white-space: pre;
+    }
+    .kw  { color: #e09060; }
+    .str { color: #a8c880; }
+    .fn  { color: #80b8e0; }
+    .cm  { color: #5a5a40; font-style: italic; }
+    .num { color: #e8b870; }
+
+    /* ── WRITING ── */
+    .writing {
+      padding: 100px 80px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+    .writing-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 52px;
+    }
+    .writing h2 {
+      font-family: var(--serif);
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      font-weight: 400;
+    }
+    .view-all {
+      font-size: 14px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .view-all:hover { color: var(--accent); }
+
+    .writing-item {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 32px;
+      padding: 28px 0;
+      border-top: 1px solid var(--border);
+      align-items: start;
+      text-decoration: none;
+      color: inherit;
+    }
+    .writing-item:last-child { border-bottom: 1px solid var(--border); }
+    .writing-date { font-size: 13px; color: var(--muted); padding-top: 5px; }
+    .writing-title {
+      font-family: var(--serif);
+      font-size: 21px;
+      font-weight: 400;
+      margin-bottom: 8px;
+      transition: color 0.15s;
+    }
+    .writing-item:hover .writing-title { color: var(--accent); }
+    .writing-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 36px 80px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-logo {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 20px;
+      color: var(--accent);
+    }
+    .footer-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy { font-size: 13px; color: var(--light); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .platform-grid,
+      .research-grid { grid-template-columns: 1fr; gap: 48px; }
+    }
+    @media (max-width: 680px) {
+      .hero, .platform, .about-dark, .research, .writing { padding: 64px 24px; }
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .writing-item { grid-template-columns: 1fr; gap: 8px; }
+      footer { flex-direction: column; gap: 20px; text-align: center; padding: 32px 24px; }
+      .banner { padding: 11px 40px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- BANNER -->
+<div class="banner" id="banner">
+  <strong>Pythia is open source.</strong> Automatically optimize your LLM prompts with a multi-agent evaluation loop.
+  <a href="https://github.com/clai-group/Pythia">Star on GitHub →</a>
+  <button class="banner-close" aria-label="Dismiss" onclick="document.getElementById('banner').remove()">×</button>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">Pythia</a>
+  <ul class="nav-links">
+    <li><a href="#platform">Platform</a></li>
+    <li><a href="#research">Research</a></li>
+    <li><a href="https://github.com/clai-group/Pythia">GitHub</a></li>
+  </ul>
+  <a href="https://github.com/clai-group/Pythia" class="nav-cta">View on GitHub</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-content">
+    <p class="eyebrow">Prompt Optimization</p>
+    <h1>Pythia: An automated prompt optimization engine</h1>
+    <p>Our AI-driven evaluation loop iteratively improves your language model prompts by analyzing failures, synthesizing improvements, and determining when it's optimized.</p>
+    <a href="https://github.com/clai-group/Pythia" class="btn-ghost-light">Get Started</a>
+  </div>
+</div>
+
+<!-- PLATFORM -->
+<section class="platform" id="platform">
+  <p class="eyebrow">Platform</p>
+  <h2>Our prompt engineering workflow</h2>
+  <div class="platform-grid">
+
+    <div class="accordion" id="accordion">
+
+      <div class="accordion-item">
+        <button class="accordion-btn is-open" aria-expanded="true">
+          Evaluate prompts against your dataset
+          <span class="acc-indicator"></span>
+        </button>
+        <div class="accordion-body" style="max-height: 200px;">
+          <div class="accordion-body-inner">
+            Run your prompt against a held-out evaluation set and measure performance with configurable metrics. Every result is tracked so the optimizer can compare across iterations.
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-btn" aria-expanded="false">
+          Analyze error patterns
+          <span class="acc-indicator"></span>
+        </button>
+        <div class="accordion-body">
+          <div class="accordion-body-inner">
+            A specialist LLM examines failures in aggregate, identifies root causes, and generates targeted hypotheses for why the current prompt underperforms.
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-btn" aria-expanded="false">
+          Synthesize improved prompts
+          <span class="acc-indicator"></span>
+        </button>
+        <div class="accordion-body">
+          <div class="accordion-body-inner">
+            An improver agent rewrites the prompt to address identified weaknesses. Multiple candidate rewrites are generated and ranked before the best is selected for evaluation.
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-btn" aria-expanded="false">
+          Intelligent iteration control
+          <span class="acc-indicator"></span>
+        </button>
+        <div class="accordion-body">
+          <div class="accordion-body-inner">
+            The controller node decides whether to continue iterating, backtrack to a stronger prior version, or halt when the prompt has converged. So no manual babysitting is required.
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-btn" aria-expanded="false">
+          Full iteration history
+          <span class="acc-indicator"></span>
+        </button>
+        <div class="accordion-body">
+          <div class="accordion-body-inner">
+            Every prompt version, score, and controller decision is logged. Compare runs, export results, and roll back to any prior checkpoint at any time.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- DEMO CARD -->
+    <div class="demo-card">
+      <div class="demo-card-header">
+        <span class="demo-card-title">Optimization run</span>
+        <span class="demo-pill">In progress</span>
+      </div>
+      <div class="demo-row">
+        <span class="demo-label">Iteration</span>
+        <span class="demo-val">4 / 10</span>
+      </div>
+      <div class="demo-row">
+        <span class="demo-label">Current score</span>
+        <span class="demo-accent">0.847</span>
+      </div>
+      <div class="demo-row">
+        <span class="demo-label">Best score</span>
+        <span class="demo-accent">0.863</span>
+      </div>
+      <div class="demo-row">
+        <span class="demo-label">Status</span>
+        <span class="demo-val">Synthesizing...</span>
+      </div>
+
+      <hr class="demo-hr">
+      <div class="demo-section-label">Score history</div>
+
+      <div class="iter-row">
+        <span class="demo-label">Iter 1</span>
+        <span>0.612 <span class="badge">baseline</span></span>
+      </div>
+      <div class="iter-row">
+        <span class="demo-label">Iter 2</span>
+        <span>0.741 &nbsp;↑</span>
+      </div>
+      <div class="iter-row">
+        <span class="demo-label">Iter 3</span>
+        <span>0.863 &nbsp;↑ <span class="badge badge-best">best</span></span>
+      </div>
+      <div class="iter-row">
+        <span class="demo-label">Iter 4</span>
+        <span>0.847 &nbsp;↓ <span class="badge">backtracking</span></span>
+      </div>
+
+      <div class="demo-footer">
+        Error pattern: model missing temporal context in multi-step reasoning tasks
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ABOUT DARK -->
+<div class="about-dark">
+  <div class="about-dark-content">
+    <p class="eyebrow">About</p>
+    <h2>We are building a framework that turns prompt engineering from art into science.</h2>
+    <p>Pythia implements a fully autonomous optimization loop — evaluate, analyze, improve, repeat — powered by LangGraph's stateful agentic workflows. Stop guessing at prompts. Start iterating systematically.</p>
+    <a href="https://github.com/clai-group/Pythia" class="btn-ghost-light">Read the docs</a>
+  </div>
+</div>
+
+<!-- RESEARCH -->
+<section class="research" id="research">
+  <div class="research-grid">
+
+    <div class="code-block">
+      <pre><span class="cm"># Run the optimization loop</span>
+<span class="kw">from</span> pythia <span class="kw">import</span> <span class="fn">Pythia</span>
+
+optimizer = <span class="fn">Pythia</span>(
+    LLMbackend = backend,
+    dev_data_path= dev_eval_dataset,
+    val_data_path= val_eval_dataset,
+    output_dir = "outputs",
+    SOP = "",
+    initial_prompt = "Do the patients show signs of a common cold?"
+    max_iterations=<span class="num">10</span>,
+    sens_threshold = 0.7,
+    spec_threshold = 0.7,
+)
+
+<span class="kw">print</span>(result.best_prompt)
+    </div>
+
+    <div>
+      <p class="eyebrow">Research</p>
+      <h2>Grounded in agentic AI research</h2>
+      <p>Pythia draws on work in automatic prompt optimization, chain-of-thought prompting, and multi-agent LLM systems. The evaluation-synthesis loop is inspired by DSPy and APE, reimplemented as a stateful LangGraph workflow with backtracking and intelligent halting logic.</p>
+      <a href="https://github.com/clai-group/Pythia" class="btn-ghost-dark">View on GitHub</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">Pythia</span>
+  <ul class="footer-links">
+    <li><a href="https://github.com/clai-group/Pythia">GitHub</a></li>
+    <li><a href="https://github.com/clai-group/Pythia/blob/main/README.md">Docs</a></li>
+    <li><a href="https://github.com/clai-group/Pythia/issues">Issues</a></li>
+  </ul>
+  <span class="footer-copy">© 2026 Pythia</span>
+</footer>
+
+<script>
+  (function () {
+    var acc = document.getElementById('accordion');
+    if (!acc) return;
+
+    acc.querySelectorAll('.accordion-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var isOpen = this.getAttribute('aria-expanded') === 'true';
+
+        // close all
+        acc.querySelectorAll('.accordion-btn').forEach(function (b) {
+          b.setAttribute('aria-expanded', 'false');
+          b.classList.remove('is-open');
+          b.nextElementSibling.style.maxHeight = '0';
+        });
+
+        // open this one if it was closed
+        if (!isOpen) {
+          this.setAttribute('aria-expanded', 'true');
+          this.classList.add('is-open');
+          this.nextElementSibling.style.maxHeight =
+            this.nextElementSibling.scrollHeight + 'px';
+        }
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>

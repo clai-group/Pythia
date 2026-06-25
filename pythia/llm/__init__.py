@@ -1,14 +1,4 @@
-try:
-    from pythia.llm.pythia_ollama import ollama_backend
-except ImportError:
-    ollama_backend = None
+from pythia.llm.ollama_backend import OllamaBackend
+from pythia.llm.openai_compat import OpenAICompatBackend
 
-try:
-    from pythia.llm.pythia_gemini import gemini_backend
-except ImportError:
-    gemini_backend = None
-
-try: 
-    from pythia.llm.pythia_openai import OpenAILLM
-except ImportError:
-    OpenAILLM = None
+__all__ = ['OllamaBackend', 'OpenAICompatBackend', 'VLLMBackend']
