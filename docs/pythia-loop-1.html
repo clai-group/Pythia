@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pythia — Optimization Loop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  .pyt{
+    --ink:#0B111A;--panel:#121C28;--panel2:#0F1825;--line:#22303F;
+    --text:#E7EDF4;--muted:#7E8DA1;
+    --teal:#34CFC2;--laurel:#5FD08A;--gold:#E7B24C;--rose:#E8745C;--glow:0 0 18px;
+    all:initial;display:block;font-family:'Space Grotesk',system-ui,sans-serif;color:var(--text);
+    background:radial-gradient(1200px 500px at 80% -10%,#15314a55,transparent 60%),radial-gradient(900px 500px at 0% 120%,#1c2f2c55,transparent 60%),var(--ink);
+    border:1px solid var(--line);border-radius:16px;padding:22px clamp(16px,3vw,28px) 20px;max-width:1040px;margin:0 auto;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  .pyt *{box-sizing:border-box;}
+  .pyt .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+  .pyt .hd{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+  .pyt .brand{display:flex;align-items:baseline;gap:10px;}
+  .pyt .brand b{font-weight:700;letter-spacing:.04em;font-size:15px;}
+  .pyt .brand span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+  .pyt .hd-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .pyt .concept{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);}
+  .pyt .concept b{color:var(--teal);font-weight:600;}
+  .pyt .concept i{font-style:normal;color:#4a5a6c;}
+  .pyt .live{display:inline-flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;}
+  .pyt .live i{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:var(--glow) var(--teal);animation:bl 1.6s ease-in-out infinite;}
+  @keyframes bl{0%,100%{opacity:1}50%{opacity:.25}}
+  .pyt .ctrlbtn{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:7px;padding:5px 10px;cursor:pointer;letter-spacing:.05em;transition:.2s;}
+  .pyt .ctrlbtn:hover{color:var(--text);border-color:var(--teal);}
+  .pyt .stage{display:grid;grid-template-columns:1.42fr 1fr;gap:18px;align-items:start;}
+  @media (max-width:760px){.pyt .stage{grid-template-columns:1fr;}}
+  .pyt .col{display:flex;flex-direction:column;gap:14px;min-width:0;}
+  .pyt .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:13px;}
+  .pyt .diagram{padding:8px 6px 4px;}
+  .pyt svg.flow{display:block;width:100%;height:auto;}
+
+  .pyt .nbox{fill:#0E1926;stroke:var(--line);stroke-width:1.2;transition:stroke .3s,filter .3s;}
+  .pyt .ntitle{fill:var(--text);font-family:'Space Grotesk';font-weight:600;font-size:12.5px;}
+  .pyt .nsub{fill:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.04em;text-transform:uppercase;}
+  .pyt .agent .nbox{fill:#0E1B27;stroke:#2c4a5c;}
+  .pyt .agent.active .nbox{stroke:var(--teal);filter:drop-shadow(0 0 8px #34CFC2aa);}
+  .pyt .av-c{fill:#34CFC21f;stroke:var(--teal);stroke-width:1.1;}
+  .pyt .av-g{fill:none;stroke:var(--teal);stroke-width:1.1;}
+  .pyt .atag{fill:var(--teal);font-family:'IBM Plex Mono',monospace;font-size:7px;letter-spacing:.1em;text-transform:uppercase;opacity:.85;}
+  .pyt .tdot{fill:var(--teal);opacity:.16;}
+  .pyt .agent.active .tdot{animation:think 1.05s infinite;}
+  .pyt .agent.active .t2{animation-delay:.18s;} .pyt .agent.active .t3{animation-delay:.36s;}
+  @keyframes think{0%,75%,100%{opacity:.16}38%{opacity:1}}
+  .pyt .det .nbox{fill:#101A24;stroke:#2a3a49;}
+  .pyt .det.active .nbox{stroke:#9fb0c2;filter:drop-shadow(0 0 7px #9fb0c277);}
+  .pyt .gauge{fill:none;stroke:var(--muted);stroke-width:1.2;}
+  .pyt .fsa .nbox{fill:#1A1305;stroke:#5a4a26;}
+  .pyt .fsa.active .nbox{stroke:var(--gold);filter:drop-shadow(0 0 9px #E7B24Caa);}
+  .pyt .fsa .glyph{fill:none;stroke:var(--gold);stroke-width:1.2;opacity:.9;}
+  .pyt .val .nbox{fill:#0E1E18;stroke:#2c4a3c;}
+  .pyt .val.active .nbox{stroke:var(--laurel);filter:drop-shadow(0 0 8px #5FD08Aaa);}
+  .pyt .check{fill:none;stroke:var(--laurel);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+  .pyt .edge{fill:none;stroke:#2b3b4d;stroke-width:1.6;}
+  .pyt .edge.fb{stroke-dasharray:3 4;}
+  .pyt .edge.halt{stroke:#3a3320;}
+  .pyt #pulse{fill:var(--teal);filter:drop-shadow(0 0 6px var(--teal));}
+  .pyt #pulse.halt{fill:var(--gold);filter:drop-shadow(0 0 6px var(--gold));}
+  .pyt #pulse.back{fill:var(--rose);filter:drop-shadow(0 0 6px var(--rose));}
+  .pyt .legendline{font-family:'IBM Plex Mono',monospace;font-size:8px;fill:var(--muted);}
+  .pyt .lg-a{fill:var(--teal);}.pyt .lg-d{fill:#9fb0c2;}.pyt .lg-c{fill:var(--gold);}.pyt .lg-v{fill:var(--laurel);}
+  .pyt #kcount{font-family:'IBM Plex Mono',monospace;font-size:8.5px;fill:var(--rose);opacity:0;transition:opacity .3s;}
+  .pyt #spiral{opacity:0;transform-box:fill-box;transform-origin:center;}
+  .pyt #spiral.on{opacity:.9;animation:spin 1.4s linear infinite;}
+  .pyt #spiral path{fill:none;stroke:var(--rose);stroke-width:1.6;stroke-linecap:round;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .pyt .panel{padding:14px 15px;}
+  .pyt .lab{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px;}
+  .pyt .lab .it{color:var(--teal);text-transform:none;letter-spacing:0;}
+
+  /* prompt + diff */
+  .pyt .changeTag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--laurel);background:#5FD08A12;border:1px solid #2f5a44;border-radius:6px;padding:3px 8px;margin-bottom:8px;display:inline-block;opacity:0;transition:opacity .3s;}
+  .pyt .changeTag.show{opacity:1;}
+  .pyt .changeTag.back{color:var(--rose);border-color:#7a3f36;background:#E8745C12;}
+  .pyt .prompt{font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.55;color:#CBD6E4;min-height:74px;transition:opacity .35s;}
+  .pyt .prompt.swap{opacity:0;}
+  .pyt .prompt ins{text-decoration:none;background:#5FD08A26;color:#d6f0e2;border-radius:3px;padding:0 2px;box-shadow:inset 0 -1px 0 #5FD08A66;}
+  .pyt .prompt del{text-decoration:line-through;color:#e0897a;opacity:.7;}
+  .pyt .prompt .pk{color:var(--gold);}
+
+  /* clinical note */
+  .pyt .notebody{font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.6;color:#c4d0de;background:#0b1622;border:1px solid var(--line);border-radius:8px;padding:10px 11px;min-height:52px;transition:opacity .3s;}
+  .pyt .notebody b{color:var(--teal);font-weight:600;}
+  .pyt .notebody .neg{color:var(--rose);font-weight:600;text-decoration:underline;text-underline-offset:2px;}
+  .pyt .noteverdict{margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .pyt .nvp{padding:3px 8px;border-radius:6px;border:1px solid var(--line);white-space:nowrap;}
+  .pyt .nvp.wrong{color:var(--rose);border-color:#7a3f36;box-shadow:var(--glow) #E8745C22;}
+  .pyt .nvp.right{color:var(--laurel);border-color:#3f6e52;box-shadow:var(--glow) #5FD08A22;}
+  .pyt .nvtext{color:var(--muted);}
+
+  /* metrics */
+  .pyt .metrics{display:flex;flex-direction:column;gap:10px;}
+  .pyt .m{display:grid;grid-template-columns:58px 1fr 40px;align-items:center;gap:10px;}
+  .pyt .m .mn{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .pyt .track{height:7px;border-radius:4px;background:#0c1622;overflow:hidden;}
+  .pyt .fill{height:100%;width:0;border-radius:4px;transition:width .8s cubic-bezier(.4,0,.2,1);}
+  .pyt .fill.sens{background:linear-gradient(90deg,#2aa79b,var(--teal));}
+  .pyt .fill.spec{background:linear-gradient(90deg,#3f9e63,var(--laurel));}
+  .pyt .fill.f1{background:linear-gradient(90deg,#9a8330,var(--gold));}
+  .pyt .mv{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--text);}
+
+  /* objective */
+  .pyt .obj{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+  .pyt .objhead{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px;}
+  .pyt .objhead span{color:var(--teal);}
+  .pyt .objeq{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#aab8c8;margin:7px 0 9px;line-height:1.4;}
+  .pyt .objeq b{color:var(--gold);}
+  .pyt .checks{display:flex;gap:7px;flex-wrap:wrap;}
+  .pyt .chk{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--muted);padding:3px 7px;border:1px solid var(--line);border-radius:6px;}
+  .pyt .chk.ok{color:var(--laurel);border-color:#3f6e52;}
+  .pyt .chk.no{color:var(--rose);border-color:#7a3f36;}
+  .pyt .verdict{display:flex;align-items:center;gap:11px;margin-top:12px;}
+  .pyt .vbadge{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:7px;border:1px solid var(--line);color:var(--muted);transition:.3s;white-space:nowrap;}
+  .pyt .vbadge.continue{color:var(--teal);border-color:#34CFC2;box-shadow:var(--glow) #34CFC233;}
+  .pyt .vbadge.backtrack{color:var(--rose);border-color:#E8745C;box-shadow:var(--glow) #E8745C33;}
+  .pyt .vbadge.halt{color:var(--gold);border-color:#E7B24C;box-shadow:var(--glow) #E7B24C44;}
+  .pyt .vbadge.infinity_war{color:var(--rose);border-color:#E8745C;box-shadow:var(--glow) #E8745C44;}
+  .pyt .vtext{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);line-height:1.4;}
+  .pyt .hist{padding:13px 16px 11px;}
+  .pyt .spark{width:100%;height:60px;display:block;}
+  .pyt .sl{fill:none;stroke:var(--teal);stroke-width:2;}.pyt .sl.back{stroke:var(--rose);}
+  .pyt .sd{fill:var(--teal);}.pyt .sd.best{fill:var(--gold);}.pyt .sd.back{fill:var(--rose);}
+  .pyt .sx{font-family:'IBM Plex Mono',monospace;font-size:8.5px;fill:var(--muted);}
+  @media (prefers-reduced-motion:reduce){.pyt .live i,.pyt .agent.active .tdot,.pyt #spiral.on{animation:none;}}
+</style>
+</head>
+<body>
+<div class="pyt" id="pyt">
+  <div class="hd">
+    <div class="brand"><b>PYTHIA</b><span>optimization loop</span></div>
+    <div class="hd-right">
+      <span class="concept">concept&nbsp;<i id="cidx">1/3</i>&nbsp;·&nbsp;<b id="cname">brain fog</b></span>
+      <span class="live"><i></i><span id="liveState">running</span></span>
+      <button class="ctrlbtn mono" id="toggle">PAUSE</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <!-- LEFT -->
+    <div class="col">
+      <div class="card diagram">
+        <svg class="flow" viewBox="0 0 640 326" role="img" aria-label="Pythia optimization loop: three LLM agents, a deterministic metrics node, a finite-state controller, and validation.">
+          <path id="e_seed" class="edge" d="M78,166 L96,166"/>
+          <path id="e1" class="edge" d="M216,150 Q300,112 314,116"/>
+          <path id="e2" class="edge" d="M398,94 Q500,108 520,134"/>
+          <path id="e3" class="edge fb" d="M532,202 Q506,262 486,266"/>
+          <path id="e4" class="edge fb" d="M356,271 L290,271"/>
+          <path id="e5" class="edge fb" d="M180,248 Q120,210 150,190"/>
+          <path id="e_halt" class="edge halt" d="M560,202 Q576,228 562,248"/>
+          <g id="spiral" transform="translate(332,206)">
+            <path d="M0,0 C 4,-2 7,2 4,6 C 0,11 -8,7 -8,0 C -8,-10 2,-15 12,-11"/>
+            <path d="M14,-12 l 2,5 l -6,0 z" fill="var(--rose)" stroke="none"/>
+          </g>
+          <g class="node" id="n_seed">
+            <rect class="nbox" x="6" y="150" width="72" height="32" rx="8"/>
+            <text class="ntitle" x="42" y="164" text-anchor="middle" style="font-size:11.5px">Seed</text>
+            <text class="nsub mono" x="42" y="175" text-anchor="middle">P0</text>
+          </g>
+          <g class="node agent" id="n_specialist">
+            <rect class="nbox" x="96" y="142" width="130" height="48" rx="11"/>
+            <circle class="av-c" cx="118" cy="166" r="11"/>
+            <polygon class="av-g" points="112,166 115,160.5 121,160.5 124,166 121,171.5 115,171.5"/>
+            <text class="ntitle" x="135" y="162" style="font-size:12.5px">Specialist</text>
+            <text class="atag" x="135" y="174">llm agent · predict</text>
+            <circle class="tdot t1" cx="198" cy="155" r="2.1"/><circle class="tdot t2" cx="206" cy="155" r="2.1"/><circle class="tdot t3" cx="214" cy="155" r="2.1"/>
+          </g>
+          <g class="node det" id="n_metrics">
+            <rect class="nbox" x="300" y="72" width="98" height="44" rx="9"/>
+            <path class="gauge" d="M315,101 A9,9 0 0 1 333,101"/><line class="gauge" x1="324" y1="101" x2="328" y2="93"/>
+            <text class="ntitle" x="356" y="92" text-anchor="middle" style="font-size:12px">Metrics</text>
+            <text class="nsub" x="356" y="104" text-anchor="middle">σ · τ · F1</text>
+          </g>
+          <g class="node fsa" id="n_controller">
+            <polygon class="nbox" points="496,166 518,128 562,128 584,166 562,204 518,204"/>
+            <path class="glyph" d="M540,150 L540,158 M540,158 L532,166 M540,158 L548,166"/>
+            <text class="ntitle" x="540" y="166" text-anchor="middle" style="font-size:11.5px">Controller</text>
+            <text class="nsub" x="540" y="178" text-anchor="middle" style="fill:#b79a5a">FSA · verdict</text>
+          </g>
+          <text id="kcount" x="540" y="222" text-anchor="middle">rejected k = 0 / 2</text>
+          <g class="node agent" id="n_improver">
+            <rect class="nbox" x="356" y="248" width="130" height="46" rx="11"/>
+            <circle class="av-c" cx="378" cy="271" r="11"/>
+            <polygon class="av-g" points="372,271 375,265.5 381,265.5 384,271 381,276.5 375,276.5"/>
+            <text class="ntitle" x="395" y="267" style="font-size:12.5px">Improver</text>
+            <text class="atag" x="395" y="279" id="errlabel">llm agent · error set</text>
+            <circle class="tdot t1" cx="458" cy="259" r="2.1"/><circle class="tdot t2" cx="466" cy="259" r="2.1"/><circle class="tdot t3" cx="474" cy="259" r="2.1"/>
+          </g>
+          <g class="node agent" id="n_summarizer">
+            <rect class="nbox" x="150" y="248" width="140" height="46" rx="11"/>
+            <circle class="av-c" cx="172" cy="271" r="11"/>
+            <polygon class="av-g" points="166,271 169,265.5 175,265.5 178,271 175,276.5 169,276.5"/>
+            <text class="ntitle" x="189" y="267" style="font-size:12.5px">Summarizer</text>
+            <text class="atag" x="189" y="279">llm agent · rewrite Pt+1</text>
+            <circle class="tdot t1" cx="262" cy="259" r="2.1"/><circle class="tdot t2" cx="270" cy="259" r="2.1"/><circle class="tdot t3" cx="278" cy="259" r="2.1"/>
+          </g>
+          <g class="node val" id="n_validate">
+            <rect class="nbox" x="520" y="248" width="104" height="46" rx="11"/>
+            <path class="check" d="M535,271 l4,4 l8,-9"/>
+            <text class="ntitle" x="582" y="267" text-anchor="middle" style="font-size:12px">Validate</text>
+            <text class="nsub" x="582" y="279" text-anchor="middle">held-out</text>
+          </g>
+          <g transform="translate(8,312)">
+            <circle class="lg-a" cx="3" cy="-3" r="3"/><text class="legendline" x="11" y="0">LLM agent</text>
+            <rect class="lg-d" x="78" y="-6" width="6" height="6" rx="1"/><text class="legendline" x="90" y="0">deterministic</text>
+            <polygon class="lg-c" points="172,-3 175,-7 181,-7 184,-3 181,1 175,1"/><text class="legendline" x="190" y="0">controller (FSA)</text>
+            <path class="lg-v" d="M300,-4 l2,2 l4,-5" stroke="var(--laurel)" stroke-width="1.4" fill="none"/><text class="legendline" x="312" y="0">validate</text>
+          </g>
+          <circle id="pulse" cx="78" cy="166" r="4.6" opacity="0"/>
+        </svg>
+      </div>
+
+      <!-- clinical note overlay -->
+      <div class="card panel">
+        <div class="lab">Clinical note · Specialist read <span class="it mono" id="noteIdx">note 17 / 100</span></div>
+        <div class="notebody mono" id="noteText"></div>
+        <div class="noteverdict" id="noteVerdict"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col">
+      <div class="card panel">
+        <div class="lab">Prompt&nbsp;Pt <span class="it mono" id="iterTag">iter 0 / seed</span></div>
+        <div class="changeTag mono" id="changeTag"></div>
+        <div class="prompt mono" id="prompt">Is the patient showing signs of brain fog?</div>
+      </div>
+      <div class="card panel">
+        <div class="lab">Development score</div>
+        <div class="metrics">
+          <div class="m"><span class="mn">sens σ</span><div class="track"><div class="fill sens" id="f_sens"></div></div><span class="mv" id="v_sens">—</span></div>
+          <div class="m"><span class="mn">spec τ</span><div class="track"><div class="fill spec" id="f_spec"></div></div><span class="mv" id="v_spec">—</span></div>
+          <div class="m"><span class="mn">F1</span><div class="track"><div class="fill f1" id="f_f1"></div></div><span class="mv" id="v_f1">—</span></div>
+        </div>
+        <div class="obj">
+          <div class="objhead">objective M(P;D,w) <span id="wlabel">w = 0.50 · balanced</span></div>
+          <div class="objeq" id="objEq">M = w·σ + (1−w)·τ</div>
+          <div class="checks">
+            <span class="chk" id="chkS">σ ≥ θσ —</span>
+            <span class="chk" id="chkT">τ ≥ θτ —</span>
+            <span class="chk" id="chkD">ΔF1 —</span>
+          </div>
+          <div class="verdict">
+            <span class="vbadge" id="vbadge">waiting</span>
+            <span class="vtext" id="vtext">Applying prompt to the development set…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hist" style="margin-top:16px">
+    <div class="lab">Score history <span class="mono" style="color:var(--muted)">F1 across iterations · backtrack on regression</span></div>
+    <svg class="spark" id="spark" viewBox="0 0 560 60" preserveAspectRatio="none" aria-hidden="true"></svg>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let paused=false,runToken=0;
+  const W_OBJ=0.5, TH=0.70, EPS=0.05;
+
+  const SEED_BF="Is the patient showing signs of brain fog?";
+  const SEED_CP="Is the patient showing signs of chest pain?";
+  const SEED_WZ="Is the patient showing signs of wheezing?";
+  const BF2='Identify a present, patient-reported cognitive complaint — trouble thinking, word-finding, or mental fogginess. Exclude negated, historical, or family mentions.';
+
+  const CONCEPTS=[
+    { name:"brain fog", seed:SEED_BF, halt:"threshold", val:{sens:.91,spec:.95,f1:.55},
+      note:{idx:"note 17 / 100", html:'ROS: patient <span class="neg">denies</span> <b>brain fog</b> or memory issues; reports fatigue and poor sleep.'},
+      steps:[
+        {tag:"iter 0 / seed", sens:.95,spec:.30,f1:.46, verdict:"continue", note:"fp",
+         vtext:"τ below θτ. Improver reads the false positives.", err:"42 false positives",
+         changeTag:"Summarizer + present-tense + symptom synonyms", changeKind:"add",
+         next:'Does the note report the patient <ins>currently</ins> having trouble <ins>thinking, concentrating, or remembering</ins>?'},
+        {tag:"iter 1", sens:.93,spec:.66,f1:.60, verdict:"continue", note:"fp",
+         vtext:"Improving. Still firing on negated and historical mentions.", err:"18 false positives",
+         changeTag:"Summarizer + patient attribution + negation / history exclusion", changeKind:"add",
+         next:'Identify a <ins>present, patient-reported</ins> cognitive complaint — trouble thinking, word-finding, or mental fogginess. <ins>Exclude negated, historical, or family mentions.</ins>'},
+        {tag:"iter 2", sens:.90,spec:.90,f1:.80, verdict:"continue", note:"ok",
+         vtext:"Both clear. Trying one more refinement.", err:"6 false positives",
+         changeTag:"Summarizer narrowed → requires confirmed testing", changeKind:"add",
+         next:'<ins>Flag only clinician-confirmed impairment with documented neuropsychological testing; exclude all subjective report.</ins>'},
+        {tag:"iter 3", sens:.68,spec:.93,f1:.62, verdict:"backtrack", note:"ok",
+         vtext:"ΔF1 = −0.18 (< −ε). Backtrack to best prompt (iter 2).", err:"over-specified",
+         changeTag:"restored best prompt · iter 2", changeKind:"back", next:BF2},
+        {tag:"iter 4 · selected", sens:.93,spec:.95,f1:.84, verdict:"halt", note:"ok",
+         vtext:"σ ≥ θσ and τ ≥ θτ. Halt; select P*.", err:"", changeTag:"", next:null}
+      ]},
+    { name:"chest pain", seed:SEED_CP, halt:"threshold", val:{sens:.96,spec:.93,f1:.90},
+      note:{idx:"note 06 / 100", html:'HPI: c/o <b>tightness across the chest</b> with exertion, radiating to the left arm.'},
+      steps:[
+        {tag:"iter 0 / seed", sens:.67,spec:.90,f1:.77, verdict:"continue", note:"fn",
+         vtext:"σ below θσ — cases phrased differently are missed. Improver reads false negatives.", err:"9 false negatives",
+         changeTag:"Summarizer + synonym coverage + radiation / exertion", changeKind:"add",
+         next:'Identify any <ins>present report of chest pain, pressure, tightness, or discomfort</ins>, including <ins>exertional or radiating</ins> descriptions. Exclude negated and historical mentions.'},
+        {tag:"iter 1 · selected", sens:1.0,spec:.94,f1:.90, verdict:"halt", note:"ok",
+         vtext:"Both targets cleared on one refinement. Halt; select P*.", err:"", changeTag:"", next:null}
+      ]},
+    { name:"wheezing", seed:SEED_WZ, halt:"infinity_war", val:{sens:.50,spec:.98,f1:.50},
+      note:{idx:"note 23 / 100", html:'Exam: lungs clear to auscultation, <span class="neg">no</span> <b>wheezes</b> or crackles.'},
+      steps:[
+        {tag:"iter 0 / seed", sens:.60,spec:.97,f1:.68, verdict:"continue", k:0, note:"okseed",
+         vtext:"σ below θσ. Improver tries to recover missed cases.", err:"targets false negatives",
+         changeTag:"Summarizer + risk-factor inference", changeKind:"add",
+         next:'Determine if the patient is <ins>likely experiencing wheezing</ins> from chronic lung disease, recent infection, or cough history.'},
+        {tag:"iter 1", sens:.58,spec:.88,f1:.55, verdict:"backtrack", k:1, note:"okseed",
+         vtext:"ΔF1 = −0.13. Backtrack to seed (best). k = 1.", err:"regressed",
+         changeTag:"restored seed", changeKind:"back", next:SEED_WZ},
+        {tag:"iter 2 · regen", sens:.60,spec:.97,f1:.68, verdict:"continue", k:1, note:"okseed",
+         vtext:"Regenerated from seed — identical score recovered. No gain.", err:"no improvement",
+         changeTag:"Summarizer narrowed → auscultation only", changeKind:"add",
+         next:'Flag wheezing only with <ins>documented auscultation findings</ins> on exam.'},
+        {tag:"iter 3", sens:.59,spec:.86,f1:.54, verdict:"backtrack", k:2, note:"okseed",
+         vtext:"ΔF1 = −0.14. Backtrack. k = 2 — rejection cap reached.", err:"regressed",
+         changeTag:"restored seed", changeKind:"back", next:SEED_WZ},
+        {tag:"iter 4 · halt", sens:.60,spec:.97,f1:.68, verdict:"infinity_war", k:2, note:"okseed",
+         vtext:"Infinity War: repeated regen recovers the same score. Terminate; retain seed.", err:"", changeTag:"", next:null}
+      ]}
+  ];
+
+  const T=reduce?{edge:1,read:560,hold:2100}:{edge:860,read:720,hold:2400};
+  function sleep(ms){return new Promise(res=>{let e=0,l=performance.now();
+    (function f(n){const dt=n-l;l=n;if(!paused)e+=dt;e>=ms?res():requestAnimationFrame(f);})(performance.now());});}
+  const pulse=$('pulse');
+  function setPulse(p){pulse.setAttribute('cx',p.x);pulse.setAttribute('cy',p.y);}
+  function moveAlong(path){return new Promise(res=>{const len=path.getTotalLength();let e=0,l=performance.now();const dur=T.edge;
+    if(reduce){setPulse(path.getPointAtLength(len));res();return;}
+    (function f(n){const dt=n-l;l=n;if(!paused)e+=dt;const k=Math.min(1,e/dur);setPulse(path.getPointAtLength(k*len));k<1?requestAnimationFrame(f):res();})(performance.now());});}
+  function light(id){$('n_'+id).classList.add('active');}
+  function dim(id){$('n_'+id).classList.remove('active');}
+  function dimAll(){['seed','specialist','metrics','controller','improver','summarizer','validate'].forEach(dim);}
+  function pulseClass(c){pulse.className.baseVal='';if(c)pulse.classList.add(c);}
+  function setMetrics(s){$('f_sens').style.width=(s.sens*100)+'%';$('v_sens').textContent=s.sens.toFixed(2);
+    $('f_spec').style.width=(s.spec*100)+'%';$('v_spec').textContent=s.spec.toFixed(2);
+    $('f_f1').style.width=(s.f1*100)+'%';$('v_f1').textContent=s.f1.toFixed(2);}
+  function clearMetrics(){['sens','spec','f1'].forEach(k=>{$('f_'+k).style.width='0%';$('v_'+k).textContent='—';});}
+  function setObjective(s,prevF1){
+    const M=W_OBJ*s.sens+(1-W_OBJ)*s.spec;
+    $('objEq').innerHTML='M = 0.50·'+s.sens.toFixed(2)+' + 0.50·'+s.spec.toFixed(2)+' = <b>'+M.toFixed(2)+'</b>';
+    const cs=$('chkS');cs.textContent='σ '+s.sens.toFixed(2)+(s.sens>=TH?' ≥ ':' < ')+TH.toFixed(2);cs.className='chk '+(s.sens>=TH?'ok':'no');
+    const ct=$('chkT');ct.textContent='τ '+s.spec.toFixed(2)+(s.spec>=TH?' ≥ ':' < ')+TH.toFixed(2);ct.className='chk '+(s.spec>=TH?'ok':'no');
+    const cd=$('chkD');
+    if(prevF1==null){cd.textContent='ΔF1 —';cd.className='chk';}
+    else{const d=s.f1-prevF1;cd.textContent='ΔF1 '+(d>=0?'+':'')+d.toFixed(2);cd.className='chk '+(d<-EPS?'no':'ok');}
+  }
+  function clearObjective(){$('objEq').innerHTML='M = w·σ + (1−w)·τ';['chkS','chkT','chkD'].forEach(id=>{$(id).className='chk';});
+    $('chkS').textContent='σ ≥ θσ —';$('chkT').textContent='τ ≥ θτ —';$('chkD').textContent='ΔF1 —';}
+  function setVerdict(kind,text){const b=$('vbadge');b.className='vbadge '+(kind||'');
+    b.textContent={continue:'continue',backtrack:'backtrack',halt:'halt',infinity_war:'infinity war'}[kind]||'…';$('vtext').textContent=text||'';}
+  function setNote(C,state){
+    $('noteText').innerHTML=C.note.html;$('noteIdx').textContent=C.note.idx;
+    const map={
+      fp:['POSITIVE','wrong','matched the term — ignored the negation'],
+      fn:['NEGATIVE','wrong','term not found literally — case missed'],
+      ok:['RESOLVED','right','context handled — negation now excluded'],
+      okseed:['CORRECT','right','seed already reads this note correctly']
+    };
+    const m=map[state]||map.ok;
+    $('noteVerdict').innerHTML='<span class="nvp '+m[1]+'">Specialist · '+m[0]+'</span><span class="nvtext">'+m[2]+'</span>';
+  }
+  async function swapPrompt(html,tag){const p=$('prompt');p.classList.add('swap');await sleep(330);
+    p.innerHTML=html;if(tag)$('iterTag').textContent=tag;p.classList.remove('swap');await sleep(110);}
+  function showDiff(text,kind){const c=$('changeTag');if(!text){c.classList.remove('show');return;}
+    c.textContent='⟲ '+text;c.className='changeTag show'+(kind==='back'?' back':'');}
+  function showK(k){const e=$('kcount');e.textContent='rejected k = '+k+' / 2';e.style.opacity=k>0?'1':'0';}
+  function spiral(on){$('spiral').classList.toggle('on',on);}
+
+  const sp=$('spark'),SW=560,SH=60,PAD=10;
+  function drawSpark(series,total){while(sp.firstChild)sp.removeChild(sp.firstChild);
+    const x=i=>PAD+i*((SW-2*PAD)/Math.max(total-1,1)),y=v=>SH-PAD-v*(SH-2*PAD);
+    for(let i=0;i<series.length-1;i++){const a=series[i],b=series[i+1];
+      const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1',x(i));ln.setAttribute('y1',y(a.f1));ln.setAttribute('x2',x(i+1));ln.setAttribute('y2',y(b.f1));
+      ln.setAttribute('class','sl'+((b.verdict==='backtrack'||b.verdict==='infinity_war')?' back':''));sp.appendChild(ln);}
+    series.forEach((s,i)=>{const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx',x(i));c.setAttribute('cy',y(s.f1));c.setAttribute('r',3.2);
+      c.setAttribute('class','sd'+((s.verdict==='backtrack'||s.verdict==='infinity_war')?' back':(s.best?' best':'')));sp.appendChild(c);
+      const t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',x(i));t.setAttribute('y',SH-1);
+      t.setAttribute('text-anchor','middle');t.setAttribute('class','sx');t.textContent=s.f1.toFixed(2);sp.appendChild(t);});}
+
+  async function edge(id,from,to,cls){pulseClass(cls||'');pulse.setAttribute('opacity','1');
+    if(from)light(from);await moveAlong($(id));if(to)light(to);if(from)setTimeout(()=>dim(from),250);}
+
+  function reset(C,idx){dimAll();clearMetrics();clearObjective();pulse.setAttribute('opacity','0');pulseClass('');
+    $('prompt').innerHTML=C.seed;$('iterTag').textContent='iter 0 / seed';showDiff('');
+    $('errlabel').textContent='llm agent · error set';setVerdict('','Applying prompt to the development set…');
+    $('cname').textContent=C.name;$('cidx').textContent=(idx+1)+'/'+CONCEPTS.length;
+    setNote(C, C.steps[0].note);$('liveState').textContent='running';showK(0);spiral(false);
+    while(sp.firstChild)sp.removeChild(sp.firstChild);}
+
+  async function run(){const me=++runToken;let ci=0;
+    while(me===runToken){const C=CONCEPTS[ci];reset(C,ci);await sleep(560);
+      await edge('e_seed','seed','specialist');const series=[];
+      for(let i=0;i<C.steps.length;i++){if(me!==runToken)return;const s=C.steps[i];
+        $('iterTag').textContent=s.tag;light('specialist');setNote(C,s.note);await sleep(T.read*0.5);
+        await edge('e1','specialist','metrics');setMetrics(s);
+        setObjective(s, series.length?series[series.length-1].f1:null);await sleep(T.read);
+        const back=(s.verdict==='backtrack'||s.verdict==='infinity_war');
+        await edge('e2','metrics','controller', s.verdict==='halt'?'halt':(back?'back':''));
+        setVerdict(s.verdict,s.vtext);if(C.halt==='infinity_war'&&s.k!==undefined)showK(s.k);
+        series.push({f1:s.f1,verdict:s.verdict,best:/selected/.test(s.tag)});drawSpark(series,C.steps.length);
+        await sleep(T.read*1.15);
+        if(s.verdict==='halt'||s.verdict==='infinity_war'){
+          if(s.verdict==='infinity_war')spiral(true);
+          await edge('e_halt','controller','validate','halt');$('liveState').textContent='validating';
+          if(s.verdict==='infinity_war'){showDiff('seed retained','back');await swapPrompt(C.seed,'seed retained · held-out');}
+          else{await swapPrompt($('prompt').innerHTML,'P* · held-out');}
+          setMetrics(C.val);setObjective(C.val,null);
+          setVerdict(s.verdict,(s.verdict==='infinity_war'?'Seed retained. ':'Shipped. ')+'Validation σ '+C.val.sens.toFixed(2)+' · τ '+C.val.spec.toFixed(2)+'.');
+          $('noteVerdict').innerHTML='<span class="nvp right">Specialist · P*</span><span class="nvtext">applied once to held-out notes</span>';
+          pulse.setAttribute('opacity','0');await sleep(T.hold);spiral(false);break;
+        }
+        $('errlabel').textContent='llm agent · '+(s.err||'error set');
+        await edge('e3','controller','improver',back?'back':'');await sleep(T.read*0.5);
+        await edge('e4','improver','summarizer',back?'back':'');
+        showDiff(s.changeTag,s.changeKind);
+        if(s.next)await swapPrompt(s.next, back?'restored':('iter '+(i+1)));
+        await edge('e5','summarizer','specialist',back?'back':'');
+        $('errlabel').textContent='llm agent · error set';
+      }
+      await sleep(T.hold*0.45);ci=(ci+1)%CONCEPTS.length;
+    }
+  }
+  $('toggle').addEventListener('click',function(){paused=!paused;this.textContent=paused?'RESUME':'PAUSE';$('liveState').textContent=paused?'paused':'running';});
+  drawSpark([],5);run();
+})();
+</script>
+</body>
+</html>
