@@ -34,6 +34,7 @@ class IterationSnapshot(BaseModel):
     output_entropy: float = 0.0
     critique_summary: str = ''
     controller_action: str = ''
+    controller_reason: str = ''
 
 class TransitionSnapshot(BaseModel):
     """Snapshot of a prompt transition event (backtrack/reset)."""
@@ -86,6 +87,8 @@ class PythiaState(BaseModel):
     iteration_history: list[IterationSnapshot] = Field(default_factory=list)
     transition_history: list[TransitionSnapshot] = Field(default_factory=list)
     last_decision: Optional[ControllerDecision] = None
+    consecutive_rejections: int = 0
+    max_consecutive_rejections: int = 2  # halt after this many back-to-back rejections
 
     #Terminal output
     selected_prompt: Optional[str] = None
